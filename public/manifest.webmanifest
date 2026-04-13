@@ -1,0 +1,16 @@
+{
+  "name": "Yawnly",
+  "short_name": "Yawnly",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fbf7ef",
+  "theme_color": "#1f7a62",
+  "description": "A local-first study break tracker for noticing fatigue during deep work.",
+  "icons": [
+    {
+      "src": "./favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

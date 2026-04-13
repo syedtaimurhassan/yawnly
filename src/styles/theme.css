@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light;
+  --color-bg: #fbf7ef;
+  --color-surface: rgba(255, 255, 255, 0.86);
+  --color-surface-strong: #ffffff;
+  --color-text: #152033;
+  --color-muted: #5c6576;
+  --color-border: rgba(21, 32, 51, 0.1);
+  --color-primary: #1f7a62;
+  --color-primary-strong: #165847;
+  --color-accent: #db8d28;
+  --color-highlight: #2c5fce;
+  --color-danger: #c14a45;
+  --color-danger-strong: #8d2e2b;
+  --color-heat-1: #f4d06f;
+  --color-heat-2: #f2b45c;
+  --color-heat-3: #eb8f5f;
+  --color-heat-4: #d96a63;
+  --color-heat-5: #ba4f6d;
+  --shadow-soft: 0 24px 60px rgba(17, 24, 39, 0.08);
+  --shadow-card: 0 14px 36px rgba(17, 24, 39, 0.08);
+  --radius-lg: 28px;
+  --radius-md: 20px;
+  --radius-sm: 14px;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-display: "Georgia", "Times New Roman", serif;
+}
+
