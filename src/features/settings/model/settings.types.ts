@@ -4,10 +4,10 @@ export interface AppSettings {
   storageMode: StorageMode;
   inactivityTimeoutMs: number;
   lastExportAt?: number;
+  lastParticipantName?: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  storageMode: "local",
+  storageMode: "firebase",
   inactivityTimeoutMs: 30 * 60 * 1000,
 };
-

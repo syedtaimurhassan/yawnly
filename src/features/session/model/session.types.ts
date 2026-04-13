@@ -17,6 +17,8 @@ export interface YawnEvent {
 
 export interface StudySession {
   id: string;
+  participantKey: string;
+  participantNameSnapshot: string;
   courseId: string;
   courseNameSnapshot: string;
   taskType: TaskType;
@@ -33,10 +35,11 @@ export interface StudySession {
 }
 
 export interface StartSessionInput {
+  participantKey: string;
+  participantNameSnapshot: string;
   courseId: string;
   courseNameSnapshot: string;
   taskType: TaskType;
   expectedMinutes: number;
   sleepQuality: number;
 }
-

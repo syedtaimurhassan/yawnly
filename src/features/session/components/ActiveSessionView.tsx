@@ -46,7 +46,8 @@ export function ActiveSessionView({
         <p className="eyebrow">Phase 2</p>
         <h2>{session.courseNameSnapshot}</h2>
         <p className="hero-card__subtitle">
-          {session.taskType.replace("-", " ")} • started at {formatClock(session.startTime)}
+          {session.participantNameSnapshot} studying {session.taskType.replace("-", " ")} • started at{" "}
+          {formatClock(session.startTime)}
         </p>
         <div className="timer-ring" style={{ ["--progress" as string]: `${progress}` }}>
           <div className="timer-ring__content">
@@ -78,4 +79,3 @@ export function ActiveSessionView({
     </div>
   );
 }
-

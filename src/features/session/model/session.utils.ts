@@ -29,6 +29,8 @@ export function createStudySession(
 
   return {
     id: createId("session"),
+    participantKey: input.participantKey,
+    participantNameSnapshot: input.participantNameSnapshot,
     courseId: input.courseId,
     courseNameSnapshot: input.courseNameSnapshot,
     taskType: input.taskType,
@@ -99,3 +101,10 @@ export function getAverageSleepiness(session: StudySession) {
   return Number((total / session.yawns.length).toFixed(1));
 }
 
+export function getMaxSleepiness(session: StudySession) {
+  if (session.yawns.length === 0) {
+    return 0;
+  }
+
+  return session.yawns.reduce((max, yawn) => Math.max(max, yawn.sleepiness), 0);
+}

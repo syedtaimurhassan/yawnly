@@ -1,22 +1,27 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { Course } from "@/features/courses/model/course.types";
 import { SESSION_DURATION_OPTIONS, SLEEP_SCALE, TASK_OPTIONS } from "@/features/session/model/session.constants";
 import type { StartSessionInput, TaskType } from "@/features/session/model/session.types";
+import { normalizeParticipantName } from "@/features/participants/model/participant.types";
 import { cx } from "@/lib/classNames";
 
 interface SessionSetupFormProps {
+  participantName: string;
   courses: Course[];
   onCreateCourse: (courseName: string) => Promise<void>;
+  onRemoveCourse: (courseId: string) => Promise<void>;
   onStart: (input: StartSessionInput) => Promise<void>;
   busy: boolean;
 }
 
 export function SessionSetupForm({
+  participantName,
   courses,
   onCreateCourse,
+  onRemoveCourse,
   onStart,
   busy,
 }: SessionSetupFormProps) {
@@ -27,6 +32,12 @@ export function SessionSetupForm({
   const [newCourseName, setNewCourseName] = useState("");
 
   const selectedCourse = courses.find((course) => course.id === courseId) ?? courses[0];
+
+  useEffect(() => {
+    if (!selectedCourse) {
+      setCourseId(courses[0]?.id ?? "");
+    }
+  }, [courses, selectedCourse]);
 
   async function handleAddCourse() {
     const trimmed = newCourseName.trim();
@@ -44,6 +55,8 @@ export function SessionSetupForm({
     }
 
     await onStart({
+      participantKey: normalizeParticipantName(participantName),
+      participantNameSnapshot: participantName,
       courseId: selectedCourse.id,
       courseNameSnapshot: selectedCourse.name,
       taskType,
@@ -64,18 +77,29 @@ export function SessionSetupForm({
         <SectionHeader
           eyebrow="Course"
           title="What are you studying?"
-          description="Keep course labels simple. They drive later reflection."
+          description="Keep course labels simple. You can remove them later without losing session history."
         />
-        <div className="chip-grid">
+        <div className="course-list">
           {courses.map((course) => (
-            <button
-              className={cx("chip", course.id === selectedCourse?.id && "chip--active")}
-              key={course.id}
-              onClick={() => setCourseId(course.id)}
-              type="button"
-            >
-              {course.name}
-            </button>
+            <div className="course-row" key={course.id}>
+              <button
+                className={cx("course-row__select", course.id === selectedCourse?.id && "course-row__select--active")}
+                onClick={() => setCourseId(course.id)}
+                type="button"
+              >
+                {course.name}
+              </button>
+              <Button
+                onClick={() => {
+                  void onRemoveCourse(course.id);
+                }}
+                size="sm"
+                type="button"
+                variant="ghost"
+              >
+                Remove
+              </Button>
+            </div>
           ))}
         </div>
         <div className="inline-form">
@@ -89,6 +113,9 @@ export function SessionSetupForm({
             Add
           </Button>
         </div>
+        {courses.length === 0 ? (
+          <p className="microcopy">No active courses yet. Add one before starting a session.</p>
+        ) : null}
       </Card>
 
       <Card className="stack-md">
@@ -162,4 +189,3 @@ export function SessionSetupForm({
     </div>
   );
 }
-

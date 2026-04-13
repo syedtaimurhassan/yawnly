@@ -1,11 +1,11 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { useAnalytics } from "@/features/analytics/hooks/useAnalytics";
 import type { AppView } from "@/app/view-state";
 import type { Course } from "@/features/courses/model/course.types";
+import { ParticipantPanel } from "@/features/participants/components/ParticipantPanel";
+import type { ParticipantProfile } from "@/features/participants/model/participant.types";
+import { useAnalytics } from "@/features/analytics/hooks/useAnalytics";
 import { ActiveSessionView } from "@/features/session/components/ActiveSessionView";
 import { SessionSetupForm } from "@/features/session/components/SessionSetupForm";
 import type {
@@ -41,24 +41,35 @@ const AnalyticsScreen = lazy(() =>
   })),
 );
 
+function getLatestCompletedSessionId(sessions: StudySession[]) {
+  return sessions.find((session) => session.status === "completed")?.id ?? null;
+}
+
 export function App() {
   const localRepository = useMemo(() => createLocalStorageRepository(), []);
   const firebaseReady = isFirebaseConfigured();
   const [firebaseRepository, setFirebaseRepository] = useState<DataRepository | null>(null);
   const [view, setView] = useState<AppView>("setup");
   const [settings, setSettings] = useState(getAppSettings());
+  const [participant, setParticipant] = useState<ParticipantProfile | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [lastCompletedSessionId, setLastCompletedSessionId] = useState<string | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [actionBusy, setActionBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(
+    "Enter a participant name to load a saved workspace or create a blank one.",
+  );
   const [firebaseUserId, setFirebaseUserId] = useState<string | null>(null);
 
   const activeRepository =
     settings.storageMode === "firebase" && firebaseReady && firebaseRepository
       ? firebaseRepository
       : localRepository;
+  const waitingForRepository =
+    settings.storageMode === "firebase" && firebaseReady && !firebaseRepository;
+  const busy = actionBusy || waitingForRepository;
 
   const currentSession =
     sessions.find((session) => session.id === currentSessionId) ??
@@ -80,7 +91,9 @@ export function App() {
     }
 
     void import("@/services/firebase/auth")
-      .then((module) => {
+      .then(async (module) => {
+        await module.ensureAnonymousUser();
+
         if (cancelled) {
           return;
         }
@@ -128,73 +141,12 @@ export function App() {
     };
   }, [firebaseReady]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadData() {
-      if (settings.storageMode === "firebase" && firebaseReady && !firebaseRepository) {
-        setBusy(true);
-        return;
-      }
-
-      setBusy(true);
-      setErrorMessage(null);
-
-      try {
-        const [nextCourses, nextSessions] = await Promise.all([
-          activeRepository.listCourses(),
-          activeRepository.listSessions(),
-        ]);
-
-        if (cancelled) {
-          return;
-        }
-
-        setCourses(nextCourses);
-        setSessions(nextSessions);
-
-        const activeSession = nextSessions.find((session) => isActiveSession(session)) ?? null;
-        if (activeSession) {
-          setCurrentSessionId(activeSession.id);
-          setView("active");
-        } else {
-          setCurrentSessionId(null);
-          setView((current) => (current === "active" ? "setup" : current));
-        }
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
-        const message =
-          error instanceof Error ? error.message : "Failed to load application data.";
-        setErrorMessage(message);
-
-        if (settings.storageMode === "firebase") {
-          const fallbackSettings = {
-            ...settings,
-            storageMode: "local" as StorageMode,
-          };
-
-          saveAppSettings(fallbackSettings);
-          setSettings(fallbackSettings);
-        }
-      } finally {
-        if (!cancelled) {
-          setBusy(false);
-        }
-      }
+  async function persistSession(nextSession: StudySession) {
+    if (!participant) {
+      throw new Error("Load a participant workspace before saving a session.");
     }
 
-    void loadData();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeRepository, settings.storageMode, firebaseReady, firebaseRepository]);
-
-  async function persistSession(nextSession: StudySession) {
-    const saved = await activeRepository.upsertSession(nextSession);
+    const saved = await activeRepository.upsertSession(participant.nameKey, nextSession);
     setSessions((current) => {
       const existingIndex = current.findIndex((session) => session.id === saved.id);
       if (existingIndex >= 0) {
@@ -208,7 +160,60 @@ export function App() {
     return saved;
   }
 
+  function resetWorkspace(message: string) {
+    setParticipant(null);
+    setCourses([]);
+    setSessions([]);
+    setCurrentSessionId(null);
+    setLastCompletedSessionId(null);
+    setView("setup");
+    setInfoMessage(message);
+  }
+
+  async function handleLoadParticipant(displayName: string) {
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const workspace = await activeRepository.loadWorkspace(displayName);
+      const activeSession = workspace.sessions.find((session) => isActiveSession(session)) ?? null;
+      const nextSettings = {
+        ...settings,
+        lastParticipantName: workspace.participant.displayName,
+      };
+
+      saveAppSettings(nextSettings);
+      setSettings(nextSettings);
+      setParticipant(workspace.participant);
+      setCourses(workspace.courses);
+      setSessions(workspace.sessions);
+      setCurrentSessionId(activeSession?.id ?? null);
+      setLastCompletedSessionId(getLatestCompletedSessionId(workspace.sessions));
+      setView(activeSession ? "active" : "setup");
+      setInfoMessage(
+        activeSession
+          ? `Resumed the active session for ${workspace.participant.displayName}.`
+          : workspace.existed
+            ? `Loaded the existing workspace for ${workspace.participant.displayName}.`
+            : `Created a new workspace for ${workspace.participant.displayName}.`,
+      );
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to load the participant workspace.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  function handleClearParticipant() {
+    resetWorkspace("Enter another name to load a different workspace.");
+  }
+
   async function handleCreateCourse(name: string) {
+    if (!participant) {
+      setErrorMessage("Load a participant workspace before adding courses.");
+      return;
+    }
+
     const normalizedName = name.trim();
     if (!normalizedName) {
       return;
@@ -218,19 +223,64 @@ export function App() {
       return;
     }
 
-    const course = createCourse(normalizedName);
-    await activeRepository.upsertCourse(course);
-    setCourses((current) =>
-      [...current, course].sort((left, right) => left.name.localeCompare(right.name)),
-    );
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const course = createCourse(normalizedName);
+      const saved = await activeRepository.upsertCourse(participant.nameKey, course);
+      setCourses((current) =>
+        [...current, saved].sort((left, right) => left.name.localeCompare(right.name)),
+      );
+      setInfoMessage(`Added ${saved.name} to ${participant.displayName}'s course list.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to save the new course.");
+    } finally {
+      setActionBusy(false);
+    }
+  }
+
+  async function handleRemoveCourse(courseId: string) {
+    if (!participant) {
+      setErrorMessage("Load a participant workspace before removing courses.");
+      return;
+    }
+
+    const course = courses.find((item) => item.id === courseId);
+    if (!course) {
+      return;
+    }
+
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      await activeRepository.archiveCourse(participant.nameKey, course);
+      setCourses((current) => current.filter((item) => item.id !== courseId));
+      setInfoMessage(`Removed ${course.name} from the active course list. Past sessions stay intact.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to remove the course.");
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   async function handleStartSession(input: StartSessionInput) {
-    const nextSession = createStudySession(input, activeRepository.kind);
-    const saved = await persistSession(nextSession);
-    setCurrentSessionId(saved.id);
-    setLastCompletedSessionId(null);
-    setView("active");
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const nextSession = createStudySession(input, activeRepository.kind);
+      const saved = await persistSession(nextSession);
+      setCurrentSessionId(saved.id);
+      setLastCompletedSessionId(null);
+      setView("active");
+      setInfoMessage(`Started a new ${saved.taskType.replace("-", " ")} session for ${saved.participantNameSnapshot}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to start the session.");
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   async function handleLogYawn(sleepiness: number) {
@@ -238,7 +288,16 @@ export function App() {
       return;
     }
 
-    await persistSession(appendYawn(currentSession, sleepiness, activeRepository.kind));
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      await persistSession(appendYawn(currentSession, sleepiness, activeRepository.kind));
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to save the yawn event.");
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   async function handleEndSession(reason: SessionEndReason) {
@@ -246,15 +305,29 @@ export function App() {
       return;
     }
 
-    const completed = await persistSession(
-      completeSession(currentSession, reason, activeRepository.kind),
-    );
-    setCurrentSessionId(null);
-    setLastCompletedSessionId(completed.id);
-    setView("summary");
+    setActionBusy(true);
+    setErrorMessage(null);
+
+    try {
+      const completed = await persistSession(
+        completeSession(currentSession, reason, activeRepository.kind),
+      );
+      setCurrentSessionId(null);
+      setLastCompletedSessionId(completed.id);
+      setView("summary");
+      setInfoMessage(`Saved the completed session for ${completed.participantNameSnapshot}.`);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to close the session.");
+    } finally {
+      setActionBusy(false);
+    }
   }
 
   function handleChangeStorageMode(mode: StorageMode) {
+    if (mode === settings.storageMode) {
+      return;
+    }
+
     if (mode === "firebase" && !firebaseReady) {
       setErrorMessage("Firebase mode is disabled until the VITE_FIREBASE_* values are configured.");
       return;
@@ -267,11 +340,14 @@ export function App() {
 
     saveAppSettings(nextSettings);
     setSettings(nextSettings);
+    setErrorMessage(null);
+    resetWorkspace(`Storage mode is now ${mode}. Enter a name to load that workspace.`);
   }
 
   function handleExport() {
     const payload = {
       exportedAt: new Date().toISOString(),
+      participant,
       settings,
       courses,
       sessions,
@@ -294,18 +370,23 @@ export function App() {
 
     saveAppSettings(nextSettings);
     setSettings(nextSettings);
+    setInfoMessage("Exported the current participant workspace as JSON.");
+  }
+
+  function handleReturnToSetup() {
+    resetWorkspace("Re-enter a participant name before starting another session.");
   }
 
   const headerActions =
     view === "analytics" ? (
-      <Button onClick={() => setView("setup")} type="button" variant="secondary">
+      <Button onClick={handleReturnToSetup} type="button" variant="secondary">
         Back to setup
       </Button>
-    ) : (
+    ) : participant ? (
       <Button onClick={() => setView("analytics")} type="button" variant="secondary">
         Insights
       </Button>
-    );
+    ) : null;
 
   return (
     <div className="app-shell">
@@ -314,33 +395,53 @@ export function App() {
           <div>
             <span className="eyebrow">From scratch rebuild</span>
             <h1>Yawnly</h1>
+            <p className="topbar__subtitle">
+              {participant
+                ? `Workspace: ${participant.displayName} • ${settings.storageMode} storage`
+                : `Type a name to open a shared study history in ${settings.storageMode} mode.`}
+            </p>
           </div>
           {headerActions}
         </div>
 
         {errorMessage ? <div className="banner banner--danger">{errorMessage}</div> : null}
+        {!errorMessage && infoMessage ? <div className="banner banner--info">{infoMessage}</div> : null}
 
         {busy ? (
           <EmptyState
             title="Loading your workspace"
-            description="The app is wiring local storage and checking whether Firebase is available."
+            description="The app is preparing Firebase, local storage, or the selected participant history."
           />
         ) : null}
 
         {!busy && view === "setup" ? (
           <div className="layout-grid">
-            <SessionSetupForm
-              busy={busy}
-              courses={courses}
-              onCreateCourse={handleCreateCourse}
-              onStart={handleStartSession}
-            />
             <div className="stack-lg">
-              <SectionHeader
-                eyebrow="Phase 4"
-                title="Storage and migration controls"
-                description="These controls are intentionally visible early so the architecture stays honest."
+              <ParticipantPanel
+                busy={busy}
+                currentParticipant={participant}
+                initialName={settings.lastParticipantName ?? ""}
+                onClearParticipant={handleClearParticipant}
+                onLoadWorkspace={handleLoadParticipant}
               />
+              {participant ? (
+                <SessionSetupForm
+                  busy={busy}
+                  courses={courses}
+                  onCreateCourse={handleCreateCourse}
+                  onRemoveCourse={handleRemoveCourse}
+                  onStart={handleStartSession}
+                  participantName={participant.displayName}
+                />
+              ) : (
+                <EmptyState
+                  title="Enter a name to unlock session tracking"
+                  description="When the typed name already exists, Yawnly reloads that participant's history and course list."
+                />
+              )}
+            </div>
+
+            <div className="stack-lg">
               <StorageModePanel
                 firebaseAvailable={firebaseReady}
                 mode={settings.storageMode}
@@ -354,6 +455,7 @@ export function App() {
               <ExportDataPanel
                 courseCount={courses.length}
                 onExport={handleExport}
+                participantName={participant?.displayName ?? null}
                 sessionCount={sessions.length}
               />
             </div>
@@ -379,7 +481,7 @@ export function App() {
             }
           >
             <SessionSummaryView
-              onStartAnother={() => setView("setup")}
+              onStartAnother={handleReturnToSetup}
               onViewAnalytics={() => setView("analytics")}
               session={latestCompletedSession}
             />
@@ -387,7 +489,12 @@ export function App() {
         ) : null}
 
         {!busy && view === "analytics" ? (
-          analytics.overview.sessionCount === 0 ? (
+          !participant ? (
+            <EmptyState
+              title="No participant workspace loaded"
+              description="Return to setup, enter a participant name, and load the relevant session history first."
+            />
+          ) : analytics.overview.sessionCount === 0 ? (
             <EmptyState
               title="No completed sessions yet"
               description="Finish at least one study session to unlock reflection and trend views."

@@ -17,7 +17,7 @@ export function StorageModePanel({
     <Card className="stack-md">
       <div className="section-header">
         <h3>Storage mode</h3>
-        <p>Keep local mode as the baseline. Switch to Firebase only after config and rules are ready.</p>
+        <p>Firebase is the default for cross-device history. Local mode is still useful for isolated testing.</p>
       </div>
       <div className="button-row">
         <Button
@@ -41,4 +41,3 @@ export function StorageModePanel({
     </Card>
   );
 }
-

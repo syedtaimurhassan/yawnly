@@ -1,16 +1,17 @@
 # Yawnly
 
-Yawnly is a local-first study tracking app for logging yawns, noticing fatigue early, and reflecting on which study contexts feel draining over time.
+Yawnly is a Firebase-ready study tracking app for logging yawns, noticing fatigue early, and reflecting on which study contexts feel draining over time.
 
 ## What Is Implemented
 
 - A clean rebuild from scratch in React + TypeScript
 - A single-screen mobile-first web app that works on GitHub Pages
-- Local-first storage through `localStorage`
-- A repository boundary so the app can switch to Firestore later
+- Participant-name workspaces that can be reopened later by typing the same name
+- Firebase-backed storage with a local storage fallback
+- A repository boundary so the app can switch storage modes without rewriting the UI
 - Session setup, active tracking, summary, and analytics
 - GitHub Pages deployment workflow
-- Firebase config, auth, Firestore repository, and rules scaffolding
+- Firebase config, anonymous auth, Firestore repository, and participant-based rules
 
 ## Run Locally
 
@@ -37,17 +38,19 @@ Do not open `index.html` directly from the filesystem.
 
 ## Firebase Later
 
-1. Copy `.env.example` to `.env.local`
-2. Fill in the Firebase web config values
-3. Enable Anonymous Auth in Firebase Authentication
-4. Create Firestore in native mode
-5. Deploy the Firestore rules from `firebase/firestore.rules`
-6. Switch storage mode from `Local` to `Firebase` inside the app
+Firebase is already wired into this repo with the public web config in `.env`.
+
+1. Enable Anonymous Auth in Firebase Authentication
+2. Publish the rules from `firebase/firestore.rules`
+3. Push to GitHub so the Pages workflow rebuilds
+4. Open the site, enter a participant name, and load the workspace
+
+Detailed console and deployment steps are in [docs/firebase-setup.md](docs/firebase-setup.md).
 
 ## Current Build Phases
 
 1. Architecture and file structure
-2. Local-first domain model and storage
+2. Participant-name workspace model
 3. Session workflow and analytics
 4. GitHub Pages deployment
-5. Firebase-ready repository layer
+5. Firebase-backed persistence with local fallback

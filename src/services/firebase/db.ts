@@ -1,7 +1,21 @@
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+} from "firebase/firestore";
 import { getFirebaseApp } from "@/services/firebase/app";
 
-export function getFirebaseDb() {
-  return getFirestore(getFirebaseApp());
-}
+let firestoreInitialized = false;
 
+export function getFirebaseDb() {
+  const app = getFirebaseApp();
+
+  if (!firestoreInitialized) {
+    initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+    });
+    firestoreInitialized = true;
+  }
+
+  return getFirestore(app);
+}

@@ -22,7 +22,8 @@ export function AnalyticsScreen({
         <p className="eyebrow">Phase 5</p>
         <h2>Reflection dashboard</h2>
         <p className="hero-card__subtitle">
-          Derived analytics stay on the client in this version, which keeps GitHub Pages deployment simple.
+          Raw sessions stay saved in the chosen repository. These charts are still derived in the browser,
+          which keeps GitHub Pages deployment simple.
         </p>
         <div className="stats-grid">
           <div className="stat-tile">

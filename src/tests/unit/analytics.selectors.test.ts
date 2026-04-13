@@ -11,6 +11,8 @@ import type { StudySession } from "@/features/session/model/session.types";
 function createSession(overrides: Partial<StudySession>): StudySession {
   return {
     id: "session-1",
+    participantKey: "taimur",
+    participantNameSnapshot: "Taimur",
     courseId: "personal-data",
     courseNameSnapshot: "Personal Data",
     taskType: "reading",

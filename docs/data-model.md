@@ -1,5 +1,14 @@
 # Data Model
 
+## Participant Profile
+
+- `displayName`
+- `nameKey`
+- `createdAt`
+- `updatedAt`
+- `lastSeenAt`
+- `source`
+
 ## Course
 
 - `id`
@@ -7,6 +16,7 @@
 - `active`
 - `createdAt`
 - `updatedAt`
+- `deletedAt`
 
 ## Yawn Event
 
@@ -17,6 +27,8 @@
 ## Study Session
 
 - `id`
+- `participantKey`
+- `participantNameSnapshot`
 - `courseId`
 - `courseNameSnapshot`
 - `taskType`
@@ -36,12 +48,13 @@
 - `storageMode`
 - `inactivityTimeoutMs`
 - `lastExportAt`
+- `lastParticipantName`
 
 ## Firestore Shape
 
-- `users/{uid}`
-- `users/{uid}/courses/{courseId}`
-- `users/{uid}/sessions/{sessionId}`
+- `participants/{nameKey}`
+- `participants/{nameKey}/courses/{courseId}`
+- `participants/{nameKey}/sessions/{sessionId}`
+- `participants/{nameKey}/sessions/{sessionId}/yawnEvents/{eventId}`
 
-Analytics remain client-derived in the first Firebase version.
-
+Analytics remain client-derived in the first Firebase version, but the raw yawn event subcollection is preserved for later analysis work.

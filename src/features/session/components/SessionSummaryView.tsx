@@ -25,7 +25,8 @@ export function SessionSummaryView({
         <p className="eyebrow">Phase 3</p>
         <h2>Session complete</h2>
         <p className="hero-card__subtitle">
-          The useful question is not whether you were tired. It is when and where the tiredness surfaced.
+          {session.participantNameSnapshot} finished a {session.taskType.replace("-", " ")} session. The
+          useful question is when and where the tiredness surfaced.
         </p>
         <div className="stats-grid">
           <div className="stat-tile">
@@ -64,4 +65,3 @@ export function SessionSummaryView({
     </div>
   );
 }
-

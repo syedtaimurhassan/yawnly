@@ -4,9 +4,10 @@ export interface Course {
   active: boolean;
   createdAt: number;
   updatedAt: number;
+  deletedAt?: number;
 }
 
-export const DEFAULT_COURSE_NAMES = ["Personal Data"];
+export const DEFAULT_COURSE_NAMES = ["Social Graph", "Graph Theory", "Economics"];
 
 export function slugifyCourseName(name: string) {
   return name
@@ -16,4 +17,3 @@ export function slugifyCourseName(name: string) {
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
 }
-

@@ -15,7 +15,7 @@ export function FirebaseStatusPanel({
     <Card className="stack-md">
       <div className="section-header">
         <h3>Firebase status</h3>
-        <p>The project is prepared for Firebase, but it still runs fully without it.</p>
+        <p>Anonymous auth runs in the background. The typed participant name decides which workspace loads.</p>
       </div>
       <div className="status-list">
         <div className="status-list__row">
@@ -34,4 +34,3 @@ export function FirebaseStatusPanel({
     </Card>
   );
 }
-
