@@ -6,6 +6,18 @@ interface FirebaseStatusPanelProps {
   errorMessage: string | null;
 }
 
+function maskIdentifier(value: string | null) {
+  if (!value) {
+    return "Not connected";
+  }
+
+  if (value.length <= 8) {
+    return "********";
+  }
+
+  return `${value.slice(0, 4)}****${value.slice(-4)}`;
+}
+
 export function FirebaseStatusPanel({
   configured,
   userId,
@@ -24,7 +36,7 @@ export function FirebaseStatusPanel({
         </div>
         <div className="status-list__row">
           <span>Anonymous user</span>
-          <strong>{userId ?? "Not connected"}</strong>
+          <strong>{maskIdentifier(userId)}</strong>
         </div>
         <div className="status-list__row">
           <span>Last error</span>

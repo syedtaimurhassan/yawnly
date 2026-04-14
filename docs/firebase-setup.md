@@ -23,32 +23,43 @@ The session document stores summary data and the embedded `yawns` array for fast
 
 ## What Is Already In The Repo
 
-- Firebase web config is committed in [.env](../.env)
 - Anonymous auth bootstrap is in [src/services/firebase/auth.ts](../src/services/firebase/auth.ts)
 - Firestore initialization with persistent local cache is in [src/services/firebase/db.ts](../src/services/firebase/db.ts)
 - Firestore repository logic is in [src/services/storage/firestore.repository.ts](../src/services/storage/firestore.repository.ts)
 - Rules for the participant-name model are in [firebase/firestore.rules](../firebase/firestore.rules)
+- The GitHub Pages workflow reads Firebase config from GitHub Actions secrets at build time
 
 ## Firebase Console Steps
 
 1. Open the Firebase project `personal-data-43c4c`.
 2. Go to `Build -> Authentication -> Sign-in method`.
 3. Enable `Anonymous`.
-4. Go to `Build -> Firestore Database`.
-5. Confirm the database already exists and note the location you chose. Firestore locations cannot be changed later.
-6. Open the `Rules` tab.
-7. Replace the current rules with the contents of [firebase/firestore.rules](../firebase/firestore.rules).
-8. Click `Publish`.
-9. Leave indexes alone for now. This app currently uses simple collection queries that do not need composite indexes.
-10. If you later add more advanced filtered analytics, Firestore will give you direct index-creation links from the failed query message.
+4. Go to `Authentication -> Settings -> Authorized domains`.
+5. Make sure `syedtaimurhassan.github.io` is added for the GitHub Pages site.
+6. Go to `Build -> Firestore Database`.
+7. Confirm the database already exists and note the location you chose. Firestore locations cannot be changed later.
+8. Open the `Rules` tab.
+9. Replace the current rules with the contents of [firebase/firestore.rules](../firebase/firestore.rules).
+10. Click `Publish`.
+11. Leave indexes alone for now. This app currently uses simple collection queries that do not need composite indexes.
+12. If you later add more advanced filtered analytics, Firestore will give you direct index-creation links from the failed query message.
 
 ## GitHub Pages Steps
 
 1. Make sure this repo stays on `Settings -> Pages -> Build and deployment -> Source -> GitHub Actions`.
-2. Push the updated repo to GitHub.
-3. Wait for the `Deploy Yawnly` workflow to finish.
-4. Open the site again and confirm the Firebase status panel shows an anonymous user ID after the app initializes.
-5. Type a participant name, load the workspace, and verify the seeded courses appear:
+2. Open `Settings -> Secrets and variables -> Actions -> Secrets` in the GitHub repo.
+3. Add these repository secrets with the Firebase web app values:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+   - `VITE_FIREBASE_MEASUREMENT_ID`
+4. Push the updated repo to GitHub.
+5. Wait for the `Deploy Yawnly` workflow to finish.
+6. Open the site again and confirm the Firebase status panel shows `Configured: Yes` and a masked anonymous user ID after the app initializes.
+7. Type a participant name, load the workspace, and verify the seeded courses appear:
    - `Social Graph`
    - `Graph Theory`
    - `Economics`

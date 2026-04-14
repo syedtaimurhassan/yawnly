@@ -18,6 +18,18 @@ interface SettingsSheetProps {
   onSwitchParticipant: () => void;
 }
 
+function maskIdentifier(value: string | null) {
+  if (!value) {
+    return "Not connected";
+  }
+
+  if (value.length <= 8) {
+    return "********";
+  }
+
+  return `${value.slice(0, 4)}****${value.slice(-4)}`;
+}
+
 export function SettingsSheet({
   open,
   busy,
@@ -118,7 +130,7 @@ export function SettingsSheet({
             </div>
             <div className="status-list__row">
               <span>Anonymous user</span>
-              <strong>{firebaseUserId ?? "Not connected"}</strong>
+              <strong>{maskIdentifier(firebaseUserId)}</strong>
             </div>
             <div className="status-list__row">
               <span>Current storage</span>
