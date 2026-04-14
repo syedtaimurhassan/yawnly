@@ -19,7 +19,10 @@ export function AnalyticsScreen({
 }: AnalyticsScreenProps) {
   return (
     <div className="mobile-screen">
-      <div className="screen-toolbar">
+      <div className="screen-toolbar screen-toolbar--balanced">
+        <button className="toolbar-pill" onClick={onBack} type="button">
+          Back
+        </button>
         <button className="toolbar-pill" onClick={onOpenSettings} type="button">
           Settings
         </button>
@@ -27,9 +30,6 @@ export function AnalyticsScreen({
 
       <div className="screen-stack">
         <header className="screen-header">
-          <button className="back-link" onClick={onBack} type="button">
-            Back
-          </button>
           <h1>Insights</h1>
           <p>
             {participantName} has tracked {analytics.overview.sessionCount} completed session

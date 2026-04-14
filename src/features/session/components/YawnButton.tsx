@@ -20,8 +20,10 @@ export const YawnButton = memo(function YawnButton({ onClick }: YawnButtonProps)
       onClick={handleClick}
       type="button"
     >
-      <span className="yawn-button__emoji">🥱</span>
-      <span className="yawn-button__label">Tap to log a yawn</span>
+      <span className="yawn-button__content">
+        <span className="yawn-button__emoji">🥱</span>
+        <span className="yawn-button__label">Tap to log a yawn</span>
+      </span>
     </button>
   );
 });

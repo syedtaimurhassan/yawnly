@@ -68,15 +68,15 @@ export function SessionSetupForm({
 
   return (
     <div className="mobile-screen">
-      <div className="screen-toolbar">
-        <button className="toolbar-pill" onClick={onOpenSettings} type="button">
-          Settings
-        </button>
+      <div className={cx("screen-toolbar", hasInsights && "screen-toolbar--balanced")}>
         {hasInsights ? (
           <button className="toolbar-pill toolbar-pill--primary" onClick={onViewAnalytics} type="button">
             Insights
           </button>
         ) : null}
+        <button className="toolbar-pill" onClick={onOpenSettings} type="button">
+          Settings
+        </button>
       </div>
 
       <div className="screen-stack">
