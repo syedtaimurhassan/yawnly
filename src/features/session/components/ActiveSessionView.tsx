@@ -5,7 +5,7 @@ import type {
 import { useActiveSession } from "@/features/session/hooks/useActiveSession";
 import { YawnButton } from "@/features/session/components/YawnButton";
 import { SleepinessScale } from "@/features/session/components/SleepinessScale";
-import { formatClock, formatDurationMinutes } from "@/lib/dates";
+import { formatClock } from "@/lib/dates";
 
 interface ActiveSessionViewProps {
   session: StudySession;
@@ -36,14 +36,12 @@ export function ActiveSessionView({
 
   const elapsedMinutes = Math.floor(elapsedMs / 60_000);
   const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000);
-  const progress = Math.min(elapsedMinutes / session.expectedMinutes, 1);
-  const isOvertime = elapsedMinutes > session.expectedMinutes;
 
   return (
     <div className="mobile-screen mobile-screen--centered">
       <div className="active-header">
         <p>{session.courseNameSnapshot}</p>
-        <span>{session.taskType.replace("-", " ")} • {formatClock(session.startTime)}</span>
+        <span>Started at {formatClock(session.startTime)}</span>
       </div>
 
       <div className="timer-stage">
@@ -55,15 +53,15 @@ export function ActiveSessionView({
             cy="50"
             r="44"
             pathLength="100"
-            stroke={isOvertime ? "var(--color-fatigue-high)" : "var(--color-primary)"}
-            strokeDasharray={`${progress * 100} 100`}
+            stroke="var(--color-primary)"
+            strokeDasharray="100 0"
           />
         </svg>
         <div className="timer-stage__content">
           <strong>
             {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
           </strong>
-          <span>{formatDurationMinutes(session.expectedMinutes)}</span>
+          <span>Elapsed time</span>
         </div>
       </div>
 

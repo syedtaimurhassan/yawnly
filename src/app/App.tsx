@@ -290,7 +290,7 @@ export function App() {
       setCurrentSessionId(saved.id);
       setLastCompletedSessionId(null);
       setView("active");
-      setInfoMessage(`Started a new ${saved.taskType.replace("-", " ")} session for ${saved.participantNameSnapshot}.`);
+      setInfoMessage(`Started a new session for ${saved.participantNameSnapshot}.`);
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
     } finally {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import type { Course } from "@/features/courses/model/course.types";
-import { SESSION_DURATION_OPTIONS, SLEEP_SCALE, TASK_OPTIONS } from "@/features/session/model/session.constants";
-import type { StartSessionInput, TaskType } from "@/features/session/model/session.types";
+import { SLEEP_SCALE } from "@/features/session/model/session.constants";
+import type { StartSessionInput } from "@/features/session/model/session.types";
 import { normalizeParticipantName } from "@/features/participants/model/participant.types";
 import { cx } from "@/lib/classNames";
 
@@ -30,8 +30,6 @@ export function SessionSetupForm({
   busy,
 }: SessionSetupFormProps) {
   const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
-  const [taskType, setTaskType] = useState<TaskType>("reading");
-  const [expectedMinutes, setExpectedMinutes] = useState(30);
   const [sleepQuality, setSleepQuality] = useState(3);
   const [newCourseName, setNewCourseName] = useState("");
   const [managingCourses, setManagingCourses] = useState(false);
@@ -64,8 +62,6 @@ export function SessionSetupForm({
       participantNameSnapshot: participantName,
       courseId: selectedCourse.id,
       courseNameSnapshot: selectedCourse.name,
-      taskType,
-      expectedMinutes,
       sleepQuality,
     });
   }
@@ -86,7 +82,7 @@ export function SessionSetupForm({
       <div className="screen-stack">
         <header className="screen-header">
           <h1>Start a Session</h1>
-          <p>{participantName} is about to begin a focused study block.</p>
+          <p>{participantName} is about to begin a focused study block. Keep the setup lightweight and start quickly.</p>
         </header>
 
         <section className="form-section">
@@ -150,56 +146,26 @@ export function SessionSetupForm({
         </section>
 
         <section className="form-section">
-          <label className="field-label">Task Type</label>
-          <div className="task-grid">
-          {TASK_OPTIONS.map((option) => (
-            <button
-              className={cx("task-card", taskType === option.value && "task-card--active")}
-              key={option.value}
-              onClick={() => setTaskType(option.value)}
-              type="button"
-            >
-              <span className="task-card__emoji">{option.emoji}</span>
-              <strong>{option.label}</strong>
-            </button>
-          ))}
-        </div>
-        </section>
-
-        <section className="form-section">
-          <label className="field-label">Expected Duration</label>
-          <div className="chip-grid chip-grid--wrap">
-          {SESSION_DURATION_OPTIONS.map((minutes) => (
-            <button
-              className={cx("chip", expectedMinutes === minutes && "chip--active")}
-              key={minutes}
-              onClick={() => setExpectedMinutes(minutes)}
-              type="button"
-            >
-              {minutes}m
-            </button>
-          ))}
-        </div>
-        </section>
-
-        <section className="form-section">
           <label className="field-label">How did you sleep last night?</label>
+          <p className="microcopy">
+            This gives the session a simple baseline for later reflection without adding friction.
+          </p>
           <div className="sleep-grid">
-          {SLEEP_SCALE.map((value) => (
-            <button
-              className={cx("sleep-chip", sleepQuality === value && "sleep-chip--active")}
-              key={value}
-              onClick={() => setSleepQuality(value)}
-              type="button"
-            >
-              {value === 1 ? "😴" : value === 2 ? "😕" : value === 3 ? "😐" : value === 4 ? "🙂" : "😊"}
-            </button>
-          ))}
-        </div>
-        <div className="scale-labels">
-          <span>Terrible</span>
-          <span>Great</span>
-        </div>
+            {SLEEP_SCALE.map((value) => (
+              <button
+                className={cx("sleep-chip", sleepQuality === value && "sleep-chip--active")}
+                key={value}
+                onClick={() => setSleepQuality(value)}
+                type="button"
+              >
+                {value === 1 ? "😴" : value === 2 ? "😕" : value === 3 ? "😐" : value === 4 ? "🙂" : "😊"}
+              </button>
+            ))}
+          </div>
+          <div className="scale-labels">
+            <span>Terrible</span>
+            <span>Great</span>
+          </div>
         </section>
       </div>
 
@@ -211,7 +177,7 @@ export function SessionSetupForm({
         size="lg"
         type="button"
       >
-        Begin session
+        Begin studying
       </Button>
     </div>
   );

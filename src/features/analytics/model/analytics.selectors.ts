@@ -1,5 +1,8 @@
 import type { StudySession } from "@/features/session/model/session.types";
-import { getAverageSleepiness, getSessionDurationMinutes } from "@/features/session/model/session.utils";
+import {
+  getAverageSleepiness,
+  getSessionDurationMinutes,
+} from "@/features/session/model/session.utils";
 import { buildDateKey, formatShortDate } from "@/lib/dates";
 
 const TIMELINE_BUCKET_MINUTES = 5;
@@ -19,22 +22,6 @@ export function selectYawnsByCourse(sessions: StudySession[]) {
 
     current.yawns += session.yawns.length;
     aggregates.set(session.courseId, current);
-  }
-
-  return [...aggregates.values()].sort((left, right) => right.yawns - left.yawns);
-}
-
-export function selectFatigueByTaskType(sessions: StudySession[]) {
-  const aggregates = new Map<string, { name: string; yawns: number }>();
-
-  for (const session of completedSessions(sessions)) {
-    const current = aggregates.get(session.taskType) ?? {
-      name: session.taskType.replace("-", " "),
-      yawns: 0,
-    };
-
-    current.yawns += session.yawns.length;
-    aggregates.set(session.taskType, current);
   }
 
   return [...aggregates.values()].sort((left, right) => right.yawns - left.yawns);
@@ -121,6 +108,14 @@ export function selectOverviewStats(sessions: StudySession[]) {
     sessionCount: completed.length,
     totalYawns,
     avgSleepiness,
+    avgDurationMinutes:
+      completed.length === 0
+        ? 0
+        : Number(
+            (
+              completed.reduce((sum, session) => sum + getSessionDurationMinutes(session), 0) /
+              completed.length
+            ).toFixed(1),
+          ),
   };
 }
-

@@ -1,11 +1,5 @@
 import type { StorageMode } from "@/features/settings/model/settings.types";
 
-export type TaskType =
-  | "reading"
-  | "writing"
-  | "problem-solving"
-  | "watching-lecture";
-
 export type SessionStatus = "active" | "completed";
 export type SessionEndReason = "manual" | "inactivity";
 
@@ -21,8 +15,6 @@ export interface StudySession {
   participantNameSnapshot: string;
   courseId: string;
   courseNameSnapshot: string;
-  taskType: TaskType;
-  expectedMinutes: number;
   sleepQuality: number;
   status: SessionStatus;
   startTime: number;
@@ -39,7 +31,5 @@ export interface StartSessionInput {
   participantNameSnapshot: string;
   courseId: string;
   courseNameSnapshot: string;
-  taskType: TaskType;
-  expectedMinutes: number;
   sleepQuality: number;
 }

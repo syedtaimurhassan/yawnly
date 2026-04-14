@@ -33,8 +33,6 @@ export function createStudySession(
     participantNameSnapshot: input.participantNameSnapshot,
     courseId: input.courseId,
     courseNameSnapshot: input.courseNameSnapshot,
-    taskType: input.taskType,
-    expectedMinutes: input.expectedMinutes,
     sleepQuality: input.sleepQuality,
     status: "active",
     startTime: now,

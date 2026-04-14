@@ -1,4 +1,3 @@
-import { FatigueByTaskChart } from "@/features/analytics/components/FatigueByTaskChart";
 import { FatigueTrendChart } from "@/features/analytics/components/FatigueTrendChart";
 import { SleepImpactChart } from "@/features/analytics/components/SleepImpactChart";
 import { TimelineChart } from "@/features/analytics/components/TimelineChart";
@@ -50,9 +49,12 @@ export function AnalyticsScreen({
             <strong>{analytics.overview.avgSleepiness || "-"}</strong>
             <span>Avg sleepiness</span>
           </div>
+          <div className="stat-tile">
+            <strong>{analytics.overview.avgDurationMinutes || "-"}</strong>
+            <span>Avg duration</span>
+          </div>
         </div>
         <YawnsByCourseChart data={analytics.byCourse} />
-        <FatigueByTaskChart data={analytics.byTask} />
         <FatigueTrendChart data={analytics.dailyTrend} />
         <SleepImpactChart data={analytics.sleepImpact} />
         {analytics.latestTimeline.length > 0 ? (

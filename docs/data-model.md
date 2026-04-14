@@ -31,8 +31,6 @@
 - `participantNameSnapshot`
 - `courseId`
 - `courseNameSnapshot`
-- `taskType`
-- `expectedMinutes`
 - `sleepQuality`
 - `status`
 - `startTime`

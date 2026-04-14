@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   selectDailyTrend,
-  selectFatigueByTaskType,
   selectSleepImpact,
   selectTimelineBuckets,
   selectYawnsByCourse,
@@ -15,8 +14,6 @@ function createSession(overrides: Partial<StudySession>): StudySession {
     participantNameSnapshot: "Taimur",
     courseId: "personal-data",
     courseNameSnapshot: "Personal Data",
-    taskType: "reading",
-    expectedMinutes: 30,
     sleepQuality: 3,
     status: "completed",
     startTime: Date.parse("2026-04-13T10:00:00.000Z"),
@@ -54,17 +51,15 @@ describe("analytics selectors", () => {
     ]);
   });
 
-  it("builds task, daily, and sleep aggregates", () => {
+  it("builds daily and sleep aggregates", () => {
     const sessions = [
       createSession({
         id: "one",
-        taskType: "reading",
         sleepQuality: 2,
         yawns: [{ id: "a", timestamp: Date.parse("2026-04-13T10:05:00.000Z"), sleepiness: 2 }],
       }),
       createSession({
         id: "two",
-        taskType: "writing",
         startTime: Date.parse("2026-04-14T10:00:00.000Z"),
         endTime: Date.parse("2026-04-14T10:20:00.000Z"),
         sleepQuality: 4,
@@ -75,10 +70,6 @@ describe("analytics selectors", () => {
       }),
     ];
 
-    expect(selectFatigueByTaskType(sessions)).toEqual([
-      { name: "writing", yawns: 2 },
-      { name: "reading", yawns: 1 },
-    ]);
     expect(selectDailyTrend(sessions)).toEqual([
       { label: "Apr 13", yawns: 1 },
       { label: "Apr 14", yawns: 2 },

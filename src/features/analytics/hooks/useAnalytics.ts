@@ -1,7 +1,6 @@
 import type { StudySession } from "@/features/session/model/session.types";
 import {
   selectDailyTrend,
-  selectFatigueByTaskType,
   selectOverviewStats,
   selectSleepImpact,
   selectTimelineBuckets,
@@ -10,7 +9,6 @@ import {
 
 export interface AnalyticsSnapshot {
   byCourse: ReturnType<typeof selectYawnsByCourse>;
-  byTask: ReturnType<typeof selectFatigueByTaskType>;
   dailyTrend: ReturnType<typeof selectDailyTrend>;
   sleepImpact: ReturnType<typeof selectSleepImpact>;
   overview: ReturnType<typeof selectOverviewStats>;
@@ -20,7 +18,6 @@ export interface AnalyticsSnapshot {
 export function useAnalytics(sessions: StudySession[], latestSession: StudySession | null) {
   const snapshot: AnalyticsSnapshot = {
     byCourse: selectYawnsByCourse(sessions),
-    byTask: selectFatigueByTaskType(sessions),
     dailyTrend: selectDailyTrend(sessions),
     sleepImpact: selectSleepImpact(sessions),
     overview: selectOverviewStats(sessions),

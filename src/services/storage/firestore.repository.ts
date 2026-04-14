@@ -180,7 +180,6 @@ export function createFirestoreRepository(): DataRepository {
             sessionId: session.id,
             courseId: session.courseId,
             courseNameSnapshot: session.courseNameSnapshot,
-            taskType: session.taskType,
             sleepQuality: session.sleepQuality,
             source: session.source,
           },

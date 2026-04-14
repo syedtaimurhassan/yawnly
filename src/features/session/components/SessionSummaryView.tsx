@@ -22,9 +22,9 @@ export function SessionSummaryView({
     <div className="mobile-screen">
       <div className="screen-stack">
         <header className="screen-header">
-        <h2>Session complete</h2>
+          <h2>Session complete</h2>
           <p>
-            {session.participantNameSnapshot} finished a {session.taskType.replace("-", " ")} session.
+            {session.participantNameSnapshot} finished a study session for {session.courseNameSnapshot}.
           </p>
         </header>
         <div className="stats-grid">
