@@ -1,9 +1,8 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { AppView } from "@/app/view-state";
 import type { Course } from "@/features/courses/model/course.types";
-import { ParticipantPanel } from "@/features/participants/components/ParticipantPanel";
+import { ParticipantEntryScreen } from "@/features/participants/components/ParticipantEntryScreen";
 import type { ParticipantProfile } from "@/features/participants/model/participant.types";
 import { useAnalytics } from "@/features/analytics/hooks/useAnalytics";
 import { ActiveSessionView } from "@/features/session/components/ActiveSessionView";
@@ -20,9 +19,7 @@ import {
   createStudySession,
   isActiveSession,
 } from "@/features/session/model/session.utils";
-import { ExportDataPanel } from "@/features/settings/components/ExportDataPanel";
-import { FirebaseStatusPanel } from "@/features/settings/components/FirebaseStatusPanel";
-import { StorageModePanel } from "@/features/settings/components/StorageModePanel";
+import { SettingsSheet } from "@/features/settings/components/SettingsSheet";
 import type { StorageMode } from "@/features/settings/model/settings.types";
 import { isFirebaseConfigured } from "@/lib/env";
 import { getAppSettings, saveAppSettings } from "@/lib/storage";
@@ -40,6 +37,24 @@ const AnalyticsScreen = lazy(() =>
     default: module.AnalyticsScreen,
   })),
 );
+
+function getActionableErrorMessage(error: unknown) {
+  const message = error instanceof Error ? error.message : "Unexpected application error.";
+
+  if (message.includes("Missing or insufficient permissions")) {
+    return "Firebase denied this request. Publish the rules from firebase/firestore.rules in Firestore Database -> Rules, then make sure Anonymous auth is enabled in Authentication -> Sign-in method.";
+  }
+
+  if (message.includes("operation-not-allowed")) {
+    return "Anonymous auth is disabled. Enable Authentication -> Sign-in method -> Anonymous in Firebase Console.";
+  }
+
+  if (message.includes("unauthorized-domain")) {
+    return "This site domain is not authorized for Firebase Auth. Add syedtaimurhassan.github.io under Authentication -> Settings -> Authorized domains.";
+  }
+
+  return message;
+}
 
 function getLatestCompletedSessionId(sessions: StudySession[]) {
   return sessions.find((session) => session.status === "completed")?.id ?? null;
@@ -62,6 +77,7 @@ export function App() {
     "Enter a participant name to load a saved workspace or create a blank one.",
   );
   const [firebaseUserId, setFirebaseUserId] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const activeRepository =
     settings.storageMode === "firebase" && firebaseReady && firebaseRepository
@@ -104,7 +120,7 @@ export function App() {
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setErrorMessage(error instanceof Error ? error.message : "Failed to initialize Firebase auth.");
+          setErrorMessage(getActionableErrorMessage(error));
         }
       });
 
@@ -130,9 +146,7 @@ export function App() {
       })
       .catch((error: unknown) => {
         if (!cancelled) {
-          setErrorMessage(
-            error instanceof Error ? error.message : "Failed to prepare the Firestore repository.",
-          );
+          setErrorMessage(getActionableErrorMessage(error));
         }
       });
 
@@ -198,13 +212,14 @@ export function App() {
             : `Created a new workspace for ${workspace.participant.displayName}.`,
       );
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to load the participant workspace.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
   }
 
-  function handleClearParticipant() {
+  function handleSwitchParticipant() {
+    setSettingsOpen(false);
     resetWorkspace("Enter another name to load a different workspace.");
   }
 
@@ -234,7 +249,7 @@ export function App() {
       );
       setInfoMessage(`Added ${saved.name} to ${participant.displayName}'s course list.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save the new course.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -259,7 +274,7 @@ export function App() {
       setCourses((current) => current.filter((item) => item.id !== courseId));
       setInfoMessage(`Removed ${course.name} from the active course list. Past sessions stay intact.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to remove the course.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -277,7 +292,7 @@ export function App() {
       setView("active");
       setInfoMessage(`Started a new ${saved.taskType.replace("-", " ")} session for ${saved.participantNameSnapshot}.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to start the session.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -294,7 +309,7 @@ export function App() {
     try {
       await persistSession(appendYawn(currentSession, sleepiness, activeRepository.kind));
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to save the yawn event.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -317,7 +332,7 @@ export function App() {
       setView("summary");
       setInfoMessage(`Saved the completed session for ${completed.participantNameSnapshot}.`);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to close the session.");
+      setErrorMessage(getActionableErrorMessage(error));
     } finally {
       setActionBusy(false);
     }
@@ -341,6 +356,7 @@ export function App() {
     saveAppSettings(nextSettings);
     setSettings(nextSettings);
     setErrorMessage(null);
+    setSettingsOpen(false);
     resetWorkspace(`Storage mode is now ${mode}. Enter a name to load that workspace.`);
   }
 
@@ -373,93 +389,61 @@ export function App() {
     setInfoMessage("Exported the current participant workspace as JSON.");
   }
 
-  function handleReturnToSetup() {
-    resetWorkspace("Re-enter a participant name before starting another session.");
-  }
-
-  const headerActions =
-    view === "analytics" ? (
-      <Button onClick={handleReturnToSetup} type="button" variant="secondary">
-        Back to setup
-      </Button>
-    ) : participant ? (
-      <Button onClick={() => setView("analytics")} type="button" variant="secondary">
-        Insights
-      </Button>
-    ) : null;
-
   return (
     <div className="app-shell">
       <div className="app-frame">
-        <div className="topbar">
-          <div>
-            <span className="eyebrow">From scratch rebuild</span>
-            <h1>Yawnly</h1>
-            <p className="topbar__subtitle">
-              {participant
-                ? `Workspace: ${participant.displayName} • ${settings.storageMode} storage`
-                : `Type a name to open a shared study history in ${settings.storageMode} mode.`}
-            </p>
-          </div>
-          {headerActions}
-        </div>
+        <SettingsSheet
+          busy={busy}
+          courseCount={courses.length}
+          errorMessage={errorMessage}
+          firebaseAvailable={firebaseReady}
+          firebaseUserId={firebaseUserId}
+          infoMessage={infoMessage}
+          onChangeStorageMode={handleChangeStorageMode}
+          onClose={() => setSettingsOpen(false)}
+          onExport={handleExport}
+          onSwitchParticipant={handleSwitchParticipant}
+          open={settingsOpen}
+          participantName={participant?.displayName ?? null}
+          sessionCount={sessions.length}
+          storageMode={settings.storageMode}
+        />
 
-        {errorMessage ? <div className="banner banner--danger">{errorMessage}</div> : null}
-        {!errorMessage && infoMessage ? <div className="banner banner--info">{infoMessage}</div> : null}
+        {!settingsOpen && participant && errorMessage ? (
+          <div className="banner banner--danger">{errorMessage}</div>
+        ) : null}
 
         {busy ? (
-          <EmptyState
-            title="Loading your workspace"
-            description="The app is preparing Firebase, local storage, or the selected participant history."
+          <div className="mobile-screen">
+            <EmptyState
+              title="Loading your workspace"
+              description="Yawnly is preparing Firebase, local storage, or the selected participant history."
+            />
+          </div>
+        ) : null}
+
+        {!busy && !participant ? (
+          <ParticipantEntryScreen
+            busy={busy}
+            errorMessage={errorMessage}
+            initialName={settings.lastParticipantName ?? ""}
+            onLoadWorkspace={handleLoadParticipant}
+            onOpenSettings={() => setSettingsOpen(true)}
           />
         ) : null}
 
-        {!busy && view === "setup" ? (
-          <div className="layout-grid">
-            <div className="stack-lg">
-              <ParticipantPanel
-                busy={busy}
-                currentParticipant={participant}
-                initialName={settings.lastParticipantName ?? ""}
-                onClearParticipant={handleClearParticipant}
-                onLoadWorkspace={handleLoadParticipant}
-              />
-              {participant ? (
-                <SessionSetupForm
-                  busy={busy}
-                  courses={courses}
-                  onCreateCourse={handleCreateCourse}
-                  onRemoveCourse={handleRemoveCourse}
-                  onStart={handleStartSession}
-                  participantName={participant.displayName}
-                />
-              ) : (
-                <EmptyState
-                  title="Enter a name to unlock session tracking"
-                  description="When the typed name already exists, Yawnly reloads that participant's history and course list."
-                />
-              )}
-            </div>
-
-            <div className="stack-lg">
-              <StorageModePanel
-                firebaseAvailable={firebaseReady}
-                mode={settings.storageMode}
-                onChangeMode={handleChangeStorageMode}
-              />
-              <FirebaseStatusPanel
-                configured={firebaseReady}
-                errorMessage={errorMessage}
-                userId={firebaseUserId}
-              />
-              <ExportDataPanel
-                courseCount={courses.length}
-                onExport={handleExport}
-                participantName={participant?.displayName ?? null}
-                sessionCount={sessions.length}
-              />
-            </div>
-          </div>
+        {!busy && participant && view === "setup" ? (
+          <SessionSetupForm
+            busy={busy}
+            courses={courses}
+            hasInsights={analytics.overview.sessionCount > 0}
+            onCreateCourse={handleCreateCourse}
+            onOpenSettings={() => setSettingsOpen(true)}
+            onRemoveCourse={handleRemoveCourse}
+            onStart={handleStartSession}
+            onViewAnalytics={() => setView("analytics")}
+            participantName={participant.displayName}
+          />
         ) : null}
 
         {!busy && view === "active" && currentSession ? (
@@ -474,41 +458,47 @@ export function App() {
         {!busy && view === "summary" && latestCompletedSession ? (
           <Suspense
             fallback={
-              <EmptyState
-                title="Loading session summary"
-                description="The reflection view is being prepared."
-              />
+              <div className="mobile-screen">
+                <EmptyState
+                  title="Loading session summary"
+                  description="The reflection view is being prepared."
+                />
+              </div>
             }
           >
             <SessionSummaryView
-              onStartAnother={handleReturnToSetup}
+              onStartAnother={() => setView("setup")}
               onViewAnalytics={() => setView("analytics")}
               session={latestCompletedSession}
             />
           </Suspense>
         ) : null}
 
-        {!busy && view === "analytics" ? (
-          !participant ? (
-            <EmptyState
-              title="No participant workspace loaded"
-              description="Return to setup, enter a participant name, and load the relevant session history first."
-            />
-          ) : analytics.overview.sessionCount === 0 ? (
-            <EmptyState
-              title="No completed sessions yet"
-              description="Finish at least one study session to unlock reflection and trend views."
-            />
+        {!busy && participant && view === "analytics" ? (
+          analytics.overview.sessionCount === 0 ? (
+            <div className="mobile-screen">
+              <EmptyState
+                title="No completed sessions yet"
+                description="Finish at least one study session to unlock reflection and trend views."
+              />
+            </div>
           ) : (
             <Suspense
               fallback={
-                <EmptyState
-                  title="Loading analytics"
-                  description="The charting bundle is loading only when you need it."
-                />
+                <div className="mobile-screen">
+                  <EmptyState
+                    title="Loading analytics"
+                    description="The charting bundle is loading only when you need it."
+                  />
+                </div>
               }
             >
-              <AnalyticsScreen analytics={analytics} storageMode={settings.storageMode} />
+              <AnalyticsScreen
+                analytics={analytics}
+                onBack={() => setView("setup")}
+                onOpenSettings={() => setSettingsOpen(true)}
+                participantName={participant.displayName}
+              />
             </Suspense>
           )
         ) : null}

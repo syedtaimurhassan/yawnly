@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import type { Course } from "@/features/courses/model/course.types";
 import { SESSION_DURATION_OPTIONS, SLEEP_SCALE, TASK_OPTIONS } from "@/features/session/model/session.constants";
 import type { StartSessionInput, TaskType } from "@/features/session/model/session.types";
@@ -11,18 +9,24 @@ import { cx } from "@/lib/classNames";
 interface SessionSetupFormProps {
   participantName: string;
   courses: Course[];
+  hasInsights: boolean;
   onCreateCourse: (courseName: string) => Promise<void>;
+  onOpenSettings: () => void;
   onRemoveCourse: (courseId: string) => Promise<void>;
   onStart: (input: StartSessionInput) => Promise<void>;
+  onViewAnalytics: () => void;
   busy: boolean;
 }
 
 export function SessionSetupForm({
   participantName,
   courses,
+  hasInsights,
   onCreateCourse,
+  onOpenSettings,
   onRemoveCourse,
   onStart,
+  onViewAnalytics,
   busy,
 }: SessionSetupFormProps) {
   const [courseId, setCourseId] = useState(courses[0]?.id ?? "");
@@ -30,6 +34,7 @@ export function SessionSetupForm({
   const [expectedMinutes, setExpectedMinutes] = useState(30);
   const [sleepQuality, setSleepQuality] = useState(3);
   const [newCourseName, setNewCourseName] = useState("");
+  const [managingCourses, setManagingCourses] = useState(false);
 
   const selectedCourse = courses.find((course) => course.id === courseId) ?? courses[0];
 
@@ -66,65 +71,87 @@ export function SessionSetupForm({
   }
 
   return (
-    <div className="stack-lg">
-      <SectionHeader
-        eyebrow="Phase 1"
-        title="Start a study session"
-        description="Pick a course, define the task, and set a rough duration before deep work begins."
-      />
+    <div className="mobile-screen">
+      <div className="screen-toolbar">
+        <button className="toolbar-pill" onClick={onOpenSettings} type="button">
+          Settings
+        </button>
+        {hasInsights ? (
+          <button className="toolbar-pill toolbar-pill--primary" onClick={onViewAnalytics} type="button">
+            Insights
+          </button>
+        ) : null}
+      </div>
 
-      <Card className="stack-md">
-        <SectionHeader
-          eyebrow="Course"
-          title="What are you studying?"
-          description="Keep course labels simple. You can remove them later without losing session history."
-        />
-        <div className="course-list">
-          {courses.map((course) => (
-            <div className="course-row" key={course.id}>
+      <div className="screen-stack">
+        <header className="screen-header">
+          <h1>Start a Session</h1>
+          <p>{participantName} is about to begin a focused study block.</p>
+        </header>
+
+        <section className="form-section">
+          <div className="field-row">
+            <label className="field-label">Course</label>
+            <button
+              className="field-action"
+              onClick={() => setManagingCourses((current) => !current)}
+              type="button"
+            >
+              {managingCourses ? "Done" : "Manage"}
+            </button>
+          </div>
+          <div className="chip-grid chip-grid--wrap">
+            {courses.map((course) => (
               <button
-                className={cx("course-row__select", course.id === selectedCourse?.id && "course-row__select--active")}
+                className={cx("chip", course.id === selectedCourse?.id && "chip--active")}
+                key={course.id}
                 onClick={() => setCourseId(course.id)}
                 type="button"
               >
                 {course.name}
               </button>
-              <Button
-                onClick={() => {
-                  void onRemoveCourse(course.id);
-                }}
-                size="sm"
-                type="button"
-                variant="ghost"
-              >
-                Remove
-              </Button>
+            ))}
+          </div>
+          {managingCourses ? (
+            <div className="course-manager">
+              <div className="inline-form">
+                <input
+                  className="text-input"
+                  onChange={(event) => setNewCourseName(event.target.value)}
+                  placeholder="Add a course name"
+                  value={newCourseName}
+                />
+                <Button onClick={handleAddCourse} type="button" variant="secondary">
+                  Add
+                </Button>
+              </div>
+              {courses.length > 0 ? (
+                <div className="course-list">
+                  {courses.map((course) => (
+                    <div className="course-row" key={course.id}>
+                      <span>{course.name}</span>
+                      <button
+                        className="course-row__remove"
+                        onClick={() => {
+                          void onRemoveCourse(course.id);
+                        }}
+                        type="button"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="microcopy">No active courses yet. Add one before starting a session.</p>
+              )}
             </div>
-          ))}
-        </div>
-        <div className="inline-form">
-          <input
-            className="text-input"
-            onChange={(event) => setNewCourseName(event.target.value)}
-            placeholder="Add a course"
-            value={newCourseName}
-          />
-          <Button onClick={handleAddCourse} type="button" variant="secondary">
-            Add
-          </Button>
-        </div>
-        {courses.length === 0 ? (
-          <p className="microcopy">No active courses yet. Add one before starting a session.</p>
-        ) : null}
-      </Card>
+          ) : null}
+        </section>
 
-      <Card className="stack-md">
-        <SectionHeader
-          eyebrow="Task"
-          title="What kind of work is this?"
-          description="The app tracks which task contexts feel more draining over time."
-        />
-        <div className="task-grid">
+        <section className="form-section">
+          <label className="field-label">Task Type</label>
+          <div className="task-grid">
           {TASK_OPTIONS.map((option) => (
             <button
               className={cx("task-card", taskType === option.value && "task-card--active")}
@@ -137,15 +164,11 @@ export function SessionSetupForm({
             </button>
           ))}
         </div>
-      </Card>
+        </section>
 
-      <Card className="stack-md">
-        <SectionHeader
-          eyebrow="Plan"
-          title="Expected length"
-          description="This is only a target, not a rigid timer."
-        />
-        <div className="chip-grid">
+        <section className="form-section">
+          <label className="field-label">Expected Duration</label>
+          <div className="chip-grid chip-grid--wrap">
           {SESSION_DURATION_OPTIONS.map((minutes) => (
             <button
               className={cx("chip", expectedMinutes === minutes && "chip--active")}
@@ -157,23 +180,19 @@ export function SessionSetupForm({
             </button>
           ))}
         </div>
-      </Card>
+        </section>
 
-      <Card className="stack-md">
-        <SectionHeader
-          eyebrow="Sleep"
-          title="How did you sleep last night?"
-          description="This creates a lightweight baseline for later comparison."
-        />
-        <div className="chip-grid">
+        <section className="form-section">
+          <label className="field-label">How did you sleep last night?</label>
+          <div className="sleep-grid">
           {SLEEP_SCALE.map((value) => (
             <button
-              className={cx("chip", sleepQuality === value && "chip--active")}
+              className={cx("sleep-chip", sleepQuality === value && "sleep-chip--active")}
               key={value}
               onClick={() => setSleepQuality(value)}
               type="button"
             >
-              {value}
+              {value === 1 ? "😴" : value === 2 ? "😕" : value === 3 ? "😐" : value === 4 ? "🙂" : "😊"}
             </button>
           ))}
         </div>
@@ -181,9 +200,17 @@ export function SessionSetupForm({
           <span>Terrible</span>
           <span>Great</span>
         </div>
-      </Card>
+        </section>
+      </div>
 
-      <Button block disabled={!selectedCourse || busy} onClick={handleStart} size="lg" type="button">
+      <Button
+        block
+        className="session-primary-action"
+        disabled={!selectedCourse || busy}
+        onClick={handleStart}
+        size="lg"
+        type="button"
+      >
         Begin session
       </Button>
     </div>

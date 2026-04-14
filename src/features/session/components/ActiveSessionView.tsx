@@ -1,5 +1,3 @@
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import type {
   SessionEndReason,
   StudySession,
@@ -39,43 +37,59 @@ export function ActiveSessionView({
   const elapsedMinutes = Math.floor(elapsedMs / 60_000);
   const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000);
   const progress = Math.min(elapsedMinutes / session.expectedMinutes, 1);
+  const isOvertime = elapsedMinutes > session.expectedMinutes;
 
   return (
-    <div className="stack-lg">
-      <Card className="hero-card">
-        <p className="eyebrow">Phase 2</p>
-        <h2>{session.courseNameSnapshot}</h2>
-        <p className="hero-card__subtitle">
-          {session.participantNameSnapshot} studying {session.taskType.replace("-", " ")} • started at{" "}
-          {formatClock(session.startTime)}
-        </p>
-        <div className="timer-ring" style={{ ["--progress" as string]: `${progress}` }}>
-          <div className="timer-ring__content">
-            <strong>
-              {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
-            </strong>
-            <span>Target {formatDurationMinutes(session.expectedMinutes)}</span>
-          </div>
+    <div className="mobile-screen mobile-screen--centered">
+      <div className="active-header">
+        <p>{session.courseNameSnapshot}</p>
+        <span>{session.taskType.replace("-", " ")} • {formatClock(session.startTime)}</span>
+      </div>
+
+      <div className="timer-stage">
+        <svg className="timer-stage__dial" viewBox="0 0 100 100">
+          <circle className="timer-stage__track" cx="50" cy="50" r="44" />
+          <circle
+            className="timer-stage__progress"
+            cx="50"
+            cy="50"
+            r="44"
+            pathLength="100"
+            stroke={isOvertime ? "var(--color-fatigue-high)" : "var(--color-primary)"}
+            strokeDasharray={`${progress * 100} 100`}
+          />
+        </svg>
+        <div className="timer-stage__content">
+          <strong>
+            {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
+          </strong>
+          <span>{formatDurationMinutes(session.expectedMinutes)}</span>
         </div>
-        <div className="session-metrics">
-          <div>
-            <strong>{session.yawns.length}</strong>
-            <span>Yawns logged</span>
-          </div>
-          <div>
-            <strong>{session.sleepQuality}/5</strong>
-            <span>Sleep quality</span>
-          </div>
-        </div>
-      </Card>
+      </div>
+
+      <div className="yawn-counter">
+        <strong>{session.yawns.length}</strong>
+        <span>yawn{session.yawns.length === 1 ? "" : "s"} logged</span>
+      </div>
 
       <YawnButton isPulsing={isPulsing} onClick={handleLogYawn} />
 
       <SleepinessScale onChange={handleSleepinessChange} value={sleepiness} />
 
-      <Button block onClick={handleManualEnd} size="lg" type="button" variant="danger">
-        End session now
-      </Button>
+      <div className="session-metrics">
+        <div>
+          <strong>{session.sleepQuality}/5</strong>
+          <span>Sleep quality</span>
+        </div>
+        <div>
+          <strong>{session.participantNameSnapshot}</strong>
+          <span>Participant</span>
+        </div>
+      </div>
+
+      <button className="text-button text-button--danger" onClick={handleManualEnd} type="button">
+        End session
+      </button>
     </div>
   );
 }

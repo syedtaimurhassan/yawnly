@@ -1,28 +1,23 @@
 :root {
   color-scheme: light;
-  --color-bg: #fbf7ef;
-  --color-surface: rgba(255, 255, 255, 0.86);
-  --color-surface-strong: #ffffff;
-  --color-text: #152033;
-  --color-muted: #5c6576;
-  --color-border: rgba(21, 32, 51, 0.1);
-  --color-primary: #1f7a62;
-  --color-primary-strong: #165847;
-  --color-accent: #db8d28;
-  --color-highlight: #2c5fce;
-  --color-danger: #c14a45;
-  --color-danger-strong: #8d2e2b;
-  --color-heat-1: #f4d06f;
-  --color-heat-2: #f2b45c;
-  --color-heat-3: #eb8f5f;
-  --color-heat-4: #d96a63;
-  --color-heat-5: #ba4f6d;
-  --shadow-soft: 0 24px 60px rgba(17, 24, 39, 0.08);
-  --shadow-card: 0 14px 36px rgba(17, 24, 39, 0.08);
-  --radius-lg: 28px;
-  --radius-md: 20px;
+  --color-bg: #faf8f5;
+  --color-surface: rgba(245, 243, 239, 0.82);
+  --color-surface-strong: #f5f3ef;
+  --color-text: #1f242e;
+  --color-muted: #737b8c;
+  --color-border: #e5e2dc;
+  --color-primary: #4b8b70;
+  --color-primary-strong: #417861;
+  --color-accent: #d18147;
+  --color-danger: #d76742;
+  --color-fatigue-low: #4db388;
+  --color-fatigue-mid: #d1a347;
+  --color-fatigue-high: #d76742;
+  --shadow-soft: 0 18px 40px rgba(31, 36, 46, 0.06);
+  --shadow-card: 0 8px 20px rgba(31, 36, 46, 0.05);
+  --radius-lg: 24px;
+  --radius-md: 18px;
   --radius-sm: 14px;
-  --font-body: "Inter", "Segoe UI", sans-serif;
-  --font-display: "Georgia", "Times New Roman", serif;
+  --font-body: "DM Sans", "Segoe UI", sans-serif;
+  --font-display: "DM Serif Display", Georgia, serif;
 }
-

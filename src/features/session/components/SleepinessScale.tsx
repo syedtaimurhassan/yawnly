@@ -8,14 +8,17 @@ interface SleepinessScaleProps {
 export function SleepinessScale({ value, onChange }: SleepinessScaleProps) {
   return (
     <div className="scale-card">
-      <div className="section-header">
-        <h3>How sleepy are you right now?</h3>
-        <p>Capture your state without breaking focus.</p>
-      </div>
+      <p className="scale-card__title">How sleepy are you right now?</p>
       <div className="scale-grid">
         {[1, 2, 3, 4, 5].map((option) => (
           <button
-            className={cx("scale-pill", value === option && "scale-pill--active")}
+            className={cx(
+              "scale-pill",
+              value === option && "scale-pill--active",
+              value === option && option <= 2 && "scale-pill--low",
+              value === option && option === 3 && "scale-pill--mid",
+              value === option && option >= 4 && "scale-pill--high",
+            )}
             key={option}
             onClick={() => onChange(option)}
             type="button"
@@ -31,4 +34,3 @@ export function SleepinessScale({ value, onChange }: SleepinessScaleProps) {
     </div>
   );
 }
-

@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { TimelineChart } from "@/features/analytics/components/TimelineChart";
 import { selectTimelineBuckets } from "@/features/analytics/model/analytics.selectors";
 import type { StudySession } from "@/features/session/model/session.types";
@@ -20,14 +19,14 @@ export function SessionSummaryView({
   const avgSleepiness = getAverageSleepiness(session);
 
   return (
-    <div className="stack-lg">
-      <Card className="hero-card">
-        <p className="eyebrow">Phase 3</p>
+    <div className="mobile-screen">
+      <div className="screen-stack">
+        <header className="screen-header">
         <h2>Session complete</h2>
-        <p className="hero-card__subtitle">
-          {session.participantNameSnapshot} finished a {session.taskType.replace("-", " ")} session. The
-          useful question is when and where the tiredness surfaced.
-        </p>
+          <p>
+            {session.participantNameSnapshot} finished a {session.taskType.replace("-", " ")} session.
+          </p>
+        </header>
         <div className="stats-grid">
           <div className="stat-tile">
             <strong>{durationMinutes}m</strong>
@@ -46,15 +45,15 @@ export function SessionSummaryView({
             <span>Avg sleepiness</span>
           </div>
         </div>
-      </Card>
 
-      <TimelineChart
-        data={selectTimelineBuckets(session)}
-        description="This session view helps you see when fatigue started clustering."
-        title="Session timeline"
-      />
+        <TimelineChart
+          data={selectTimelineBuckets(session)}
+          description="This session view helps you see when fatigue started clustering."
+          title="Session timeline"
+        />
+      </div>
 
-      <div className="button-row">
+      <div className="button-row button-row--bottom">
         <Button block onClick={onStartAnother} type="button" variant="secondary">
           New session
         </Button>
