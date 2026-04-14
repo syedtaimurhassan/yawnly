@@ -1,18 +1,19 @@
-import { memo } from "react";
-import type {
-  SessionEndReason,
-  StudySession,
-} from "@/features/session/model/session.types";
-import { useActiveSession } from "@/features/session/hooks/useActiveSession";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
+import type { SessionEndReason } from "@/features/session/model/session.types";
 import { YawnButton } from "@/features/session/components/YawnButton";
 import { SleepinessScale } from "@/features/session/components/SleepinessScale";
+import { useInactivityTimeout } from "@/features/session/hooks/useInactivityTimeout";
 import { formatClock } from "@/lib/dates";
 
 interface ActiveSessionViewProps {
-  session: StudySession;
+  courseNameSnapshot: string;
   inactivityTimeoutMs: number;
   onLogYawn: (sleepiness: number) => void;
   onEndSession: (reason: SessionEndReason) => void;
+  participantNameSnapshot: string;
+  sleepQuality: number;
+  startTime: number;
+  yawnCount: number;
 }
 
 const ActiveHeader = memo(function ActiveHeader({
@@ -61,6 +62,46 @@ const TimerStage = memo(function TimerStage({
   );
 });
 
+const ElapsedTimer = memo(function ElapsedTimer({ startTime }: { startTime: number }) {
+  const [elapsedMs, setElapsedMs] = useState(() => Math.max(Date.now() - startTime, 0));
+
+  useEffect(() => {
+    setElapsedMs(Math.max(Date.now() - startTime, 0));
+
+    const interval = window.setInterval(() => {
+      setElapsedMs(Math.max(Date.now() - startTime, 0));
+    }, 1_000);
+
+    return () => window.clearInterval(interval);
+  }, [startTime]);
+
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
+  const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000);
+
+  return (
+    <div className="timer-stage">
+      <svg className="timer-stage__dial" viewBox="0 0 100 100">
+        <circle className="timer-stage__track" cx="50" cy="50" r="44" />
+        <circle
+          className="timer-stage__progress"
+          cx="50"
+          cy="50"
+          r="44"
+          pathLength="100"
+          stroke="var(--color-primary)"
+          strokeDasharray="100 0"
+        />
+      </svg>
+      <div className="timer-stage__content">
+        <strong>
+          {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
+        </strong>
+        <span>Elapsed time</span>
+      </div>
+    </div>
+  );
+});
+
 const YawnCounter = memo(function YawnCounter({ count }: { count: number }) {
   return (
     <div className="yawn-counter">
@@ -73,7 +114,10 @@ const YawnCounter = memo(function YawnCounter({ count }: { count: number }) {
 const SessionMeta = memo(function SessionMeta({
   sleepQuality,
   participantNameSnapshot,
-}: Pick<StudySession, "sleepQuality" | "participantNameSnapshot">) {
+}: {
+  participantNameSnapshot: string;
+  sleepQuality: number;
+}) {
   return (
     <div className="session-metrics">
       <div>
@@ -88,47 +132,63 @@ const SessionMeta = memo(function SessionMeta({
   );
 });
 
-export function ActiveSessionView({
-  session,
+export const ActiveSessionView = memo(function ActiveSessionView({
+  courseNameSnapshot,
   inactivityTimeoutMs,
   onLogYawn,
   onEndSession,
+  participantNameSnapshot,
+  sleepQuality,
+  startTime,
+  yawnCount,
 }: ActiveSessionViewProps) {
-  const {
-    elapsedMs,
-    sleepiness,
-    isPulsing,
-    handleLogYawn,
-    handleManualEnd,
-    handleSleepinessChange,
-  } = useActiveSession({
-    session,
+  const sleepinessRef = useRef(1);
+  const onLogYawnRef = useRef(onLogYawn);
+  const onEndSessionRef = useRef(onEndSession);
+  const { markActivity } = useInactivityTimeout(
     inactivityTimeoutMs,
-    onLogYawn,
-    onEndSession,
-  });
+    () => onEndSessionRef.current("inactivity"),
+    true,
+  );
 
-  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
-  const elapsedSeconds = Math.floor((elapsedMs % 60_000) / 1_000);
+  useEffect(() => {
+    onLogYawnRef.current = onLogYawn;
+  }, [onLogYawn]);
+
+  useEffect(() => {
+    onEndSessionRef.current = onEndSession;
+  }, [onEndSession]);
+
+  const handleLogYawn = useCallback(() => {
+    markActivity();
+    onLogYawnRef.current(sleepinessRef.current);
+  }, [markActivity]);
+
+  const handleManualEnd = useCallback(() => {
+    markActivity();
+    onEndSessionRef.current("manual");
+  }, [markActivity]);
+
+  const handleSleepinessChange = useCallback((value: number) => {
+    sleepinessRef.current = value;
+    markActivity();
+  }, [markActivity]);
 
   return (
     <div className="mobile-screen mobile-screen--centered">
-      <ActiveHeader
-        courseNameSnapshot={session.courseNameSnapshot}
-        startTime={session.startTime}
-      />
+      <ActiveHeader courseNameSnapshot={courseNameSnapshot} startTime={startTime} />
 
-      <TimerStage elapsedMinutes={elapsedMinutes} elapsedSeconds={elapsedSeconds} />
+      <ElapsedTimer startTime={startTime} />
 
-      <YawnCounter count={session.yawns.length} />
+      <YawnCounter count={yawnCount} />
 
-      <YawnButton isPulsing={isPulsing} onClick={handleLogYawn} />
+      <YawnButton onClick={handleLogYawn} />
 
-      <SleepinessScale onChange={handleSleepinessChange} value={sleepiness} />
+      <SleepinessScale onChange={handleSleepinessChange} />
 
       <SessionMeta
-        participantNameSnapshot={session.participantNameSnapshot}
-        sleepQuality={session.sleepQuality}
+        participantNameSnapshot={participantNameSnapshot}
+        sleepQuality={sleepQuality}
       />
 
       <button className="text-button text-button--danger" onClick={handleManualEnd} type="button">
@@ -136,4 +196,4 @@ export function ActiveSessionView({
       </button>
     </div>
   );
-}
+});

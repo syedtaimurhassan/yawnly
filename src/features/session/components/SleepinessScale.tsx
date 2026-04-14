@@ -1,15 +1,21 @@
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { cx } from "@/lib/classNames";
 
 interface SleepinessScaleProps {
-  value: number;
+  initialValue?: number;
   onChange: (value: number) => void;
 }
 
 export const SleepinessScale = memo(function SleepinessScale({
-  value,
+  initialValue = 1,
   onChange,
 }: SleepinessScaleProps) {
+  const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
+
   return (
     <div className="scale-card">
       <p className="scale-card__title">How sleepy are you right now?</p>
@@ -24,7 +30,10 @@ export const SleepinessScale = memo(function SleepinessScale({
               value === option && option >= 4 && "scale-pill--high",
             )}
             key={option}
-            onClick={() => onChange(option)}
+            onClick={() => {
+              setValue(option);
+              onChange(option);
+            }}
             type="button"
           >
             {option}

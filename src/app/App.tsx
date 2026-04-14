@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -76,7 +77,7 @@ export function App() {
   const [participant, setParticipant] = useState<ParticipantProfile | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [currentSession, setCurrentSession] = useState<StudySession | null>(null);
   const [lastCompletedSessionId, setLastCompletedSessionId] = useState<string | null>(null);
   const [screenBusy, setScreenBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
@@ -95,15 +96,11 @@ export function App() {
     settings.storageMode === "firebase" && firebaseReady && !firebaseRepository;
   const blockingBusy = screenBusy || waitingForRepository;
   const busy = actionBusy || blockingBusy;
-
-  const currentSession =
-    sessions.find((session) => session.id === currentSessionId) ??
-    sessions.find((session) => isActiveSession(session)) ??
-    null;
   const latestCompletedSession =
     sessions.find((session) => session.id === lastCompletedSessionId) ??
     sessions.find((session) => session.status === "completed") ??
     null;
+  const currentSessionRef = useRef<StudySession | null>(null);
   const hasInsights = useMemo(
     () => sessions.some((session) => session.status === "completed"),
     [sessions],
@@ -115,6 +112,10 @@ export function App() {
         : null,
     [latestCompletedSession, sessions, view],
   );
+
+  useEffect(() => {
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -179,7 +180,7 @@ export function App() {
       const existingIndex = current.findIndex((session) => session.id === nextSession.id);
       if (existingIndex >= 0) {
         const existing = current[existingIndex];
-        if (existing.updatedAt > nextSession.updatedAt) {
+        if (existing.updatedAt >= nextSession.updatedAt) {
           return current;
         }
 
@@ -192,29 +193,61 @@ export function App() {
     });
   }, []);
 
+  const replaceCurrentSessionLocally = useCallback((nextSession: StudySession | null) => {
+    setCurrentSession((current) => {
+      if (!nextSession) {
+        return null;
+      }
+
+      if (!current || current.id !== nextSession.id) {
+        return nextSession;
+      }
+
+      if (current.updatedAt >= nextSession.updatedAt) {
+        return current;
+      }
+
+      return nextSession;
+    });
+  }, []);
+
   const persistSession = useCallback(async (nextSession: StudySession) => {
     if (!participant) {
       throw new Error("Load a participant workspace before saving a session.");
     }
 
-    const saved = await activeRepository.upsertSession(participant.nameKey, nextSession);
-    upsertSessionLocally(saved);
-    return saved;
-  }, [activeRepository, participant, upsertSessionLocally]);
+    return activeRepository.upsertSession(participant.nameKey, nextSession);
+  }, [activeRepository, participant]);
 
-  const syncSessionInBackground = useCallback((nextSession: StudySession) => {
-    upsertSessionLocally(nextSession);
-    void persistSession(nextSession).catch((error: unknown) => {
-      setErrorMessage(getActionableErrorMessage(error));
-    });
+  const syncActiveSessionInBackground = useCallback((nextSession: StudySession) => {
+    replaceCurrentSessionLocally(nextSession);
+
+    void persistSession(nextSession)
+      .then((saved) => {
+        if (saved.status === "active") {
+          const current = currentSessionRef.current;
+          if (!current || current.id !== saved.id) {
+            return;
+          }
+
+          replaceCurrentSessionLocally(saved);
+          return;
+        }
+
+        upsertSessionLocally(saved);
+      })
+      .catch((error: unknown) => {
+        setErrorMessage(getActionableErrorMessage(error));
+      });
+
     return nextSession;
-  }, [persistSession, upsertSessionLocally]);
+  }, [persistSession, replaceCurrentSessionLocally, upsertSessionLocally]);
 
   function resetWorkspace(message: string) {
     setParticipant(null);
     setCourses([]);
     setSessions([]);
-    setCurrentSessionId(null);
+    setCurrentSession(null);
     setLastCompletedSessionId(null);
     setView("setup");
     setInfoMessage(message);
@@ -227,6 +260,9 @@ export function App() {
     try {
       const workspace = await activeRepository.loadWorkspace(displayName);
       const activeSession = workspace.sessions.find((session) => isActiveSession(session)) ?? null;
+      const completedSessions = workspace.sessions
+        .filter((session) => !isActiveSession(session))
+        .sort((left, right) => right.startTime - left.startTime);
       const nextSettings = {
         ...settings,
         lastParticipantName: workspace.participant.displayName,
@@ -236,9 +272,9 @@ export function App() {
       setSettings(nextSettings);
       setParticipant(workspace.participant);
       setCourses(workspace.courses);
-      setSessions(workspace.sessions);
-      setCurrentSessionId(activeSession?.id ?? null);
-      setLastCompletedSessionId(getLatestCompletedSessionId(workspace.sessions));
+      setSessions(completedSessions);
+      setCurrentSession(activeSession);
+      setLastCompletedSessionId(getLatestCompletedSessionId(completedSessions));
       setView(activeSession ? "active" : "setup");
       setInfoMessage(
         activeSession
@@ -316,54 +352,61 @@ export function App() {
     }
   }
 
-  async function handleStartSession(input: StartSessionInput) {
+  const handleStartSession = useCallback(async (input: StartSessionInput) => {
     setErrorMessage(null);
 
     try {
       const nextSession = createStudySession(input, activeRepository.kind);
-      const saved = syncSessionInBackground(nextSession);
-      setCurrentSessionId(saved.id);
+      const saved = syncActiveSessionInBackground(nextSession);
       setLastCompletedSessionId(null);
       setView("active");
       setInfoMessage(`Started a new session for ${saved.participantNameSnapshot}.`);
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
     }
-  }
+  }, [activeRepository.kind, syncActiveSessionInBackground]);
 
-  async function handleLogYawn(sleepiness: number) {
-    if (!currentSession) {
+  const handleLogYawn = useCallback(async (sleepiness: number) => {
+    const session = currentSessionRef.current;
+    if (!session) {
       return;
     }
 
     setErrorMessage(null);
 
     try {
-      syncSessionInBackground(appendYawn(currentSession, sleepiness, activeRepository.kind));
+      syncActiveSessionInBackground(appendYawn(session, sleepiness, activeRepository.kind));
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
     }
-  }
+  }, [activeRepository.kind, syncActiveSessionInBackground]);
 
-  async function handleEndSession(reason: SessionEndReason) {
-    if (!currentSession) {
+  const handleEndSession = useCallback(async (reason: SessionEndReason) => {
+    const session = currentSessionRef.current;
+    if (!session) {
       return;
     }
 
     setErrorMessage(null);
 
     try {
-      const completed = syncSessionInBackground(
-        completeSession(currentSession, reason, activeRepository.kind),
-      );
-      setCurrentSessionId(null);
+      const completed = completeSession(session, reason, activeRepository.kind);
+      replaceCurrentSessionLocally(null);
+      upsertSessionLocally(completed);
+      void persistSession(completed)
+        .then((saved) => {
+          upsertSessionLocally(saved);
+        })
+        .catch((error: unknown) => {
+          setErrorMessage(getActionableErrorMessage(error));
+        });
       setLastCompletedSessionId(completed.id);
       setView("summary");
       setInfoMessage(`Saved the completed session for ${completed.participantNameSnapshot}.`);
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
     }
-  }
+  }, [activeRepository.kind, persistSession, replaceCurrentSessionLocally, upsertSessionLocally]);
 
   function handleChangeStorageMode(mode: StorageMode) {
     if (mode === settings.storageMode) {
@@ -393,7 +436,7 @@ export function App() {
       participant,
       settings,
       courses,
-      sessions,
+      sessions: currentSession ? [currentSession, ...sessions] : sessions,
     };
 
     const blob = new Blob([JSON.stringify(payload, null, 2)], {
@@ -432,7 +475,7 @@ export function App() {
           onSwitchParticipant={handleSwitchParticipant}
           open={settingsOpen}
           participantName={participant?.displayName ?? null}
-          sessionCount={sessions.length}
+          sessionCount={sessions.length + (currentSession ? 1 : 0)}
           storageMode={settings.storageMode}
         />
 
@@ -475,10 +518,14 @@ export function App() {
 
         {!busy && view === "active" && currentSession ? (
           <ActiveSessionView
+            courseNameSnapshot={currentSession.courseNameSnapshot}
             inactivityTimeoutMs={settings.inactivityTimeoutMs}
             onEndSession={handleEndSession}
             onLogYawn={handleLogYawn}
-            session={currentSession}
+            participantNameSnapshot={currentSession.participantNameSnapshot}
+            sleepQuality={currentSession.sleepQuality}
+            startTime={currentSession.startTime}
+            yawnCount={currentSession.yawns.length}
           />
         ) : null}
 

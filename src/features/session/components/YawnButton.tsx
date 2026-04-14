@@ -1,16 +1,23 @@
-import { memo } from "react";
+import { memo, useCallback, useState } from "react";
 import { cx } from "@/lib/classNames";
 
 interface YawnButtonProps {
-  isPulsing: boolean;
   onClick: () => void;
 }
 
-export const YawnButton = memo(function YawnButton({ isPulsing, onClick }: YawnButtonProps) {
+export const YawnButton = memo(function YawnButton({ onClick }: YawnButtonProps) {
+  const [isPulsing, setIsPulsing] = useState(false);
+
+  const handleClick = useCallback(() => {
+    onClick();
+    setIsPulsing(true);
+    window.setTimeout(() => setIsPulsing(false), 420);
+  }, [onClick]);
+
   return (
     <button
       className={cx("yawn-button", isPulsing && "yawn-button--pulse")}
-      onClick={onClick}
+      onClick={handleClick}
       type="button"
     >
       <span className="yawn-button__emoji">🥱</span>
