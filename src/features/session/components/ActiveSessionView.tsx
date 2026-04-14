@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type {
   SessionEndReason,
   StudySession,
@@ -13,6 +14,79 @@ interface ActiveSessionViewProps {
   onLogYawn: (sleepiness: number) => void;
   onEndSession: (reason: SessionEndReason) => void;
 }
+
+const ActiveHeader = memo(function ActiveHeader({
+  courseNameSnapshot,
+  startTime,
+}: {
+  courseNameSnapshot: string;
+  startTime: number;
+}) {
+  return (
+    <div className="active-header">
+      <p>{courseNameSnapshot}</p>
+      <span>Started at {formatClock(startTime)}</span>
+    </div>
+  );
+});
+
+const TimerStage = memo(function TimerStage({
+  elapsedMinutes,
+  elapsedSeconds,
+}: {
+  elapsedMinutes: number;
+  elapsedSeconds: number;
+}) {
+  return (
+    <div className="timer-stage">
+      <svg className="timer-stage__dial" viewBox="0 0 100 100">
+        <circle className="timer-stage__track" cx="50" cy="50" r="44" />
+        <circle
+          className="timer-stage__progress"
+          cx="50"
+          cy="50"
+          r="44"
+          pathLength="100"
+          stroke="var(--color-primary)"
+          strokeDasharray="100 0"
+        />
+      </svg>
+      <div className="timer-stage__content">
+        <strong>
+          {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
+        </strong>
+        <span>Elapsed time</span>
+      </div>
+    </div>
+  );
+});
+
+const YawnCounter = memo(function YawnCounter({ count }: { count: number }) {
+  return (
+    <div className="yawn-counter">
+      <strong>{count}</strong>
+      <span>yawn{count === 1 ? "" : "s"} logged</span>
+    </div>
+  );
+});
+
+const SessionMeta = memo(function SessionMeta({
+  sleepQuality,
+  participantNameSnapshot,
+}: Pick<StudySession, "sleepQuality" | "participantNameSnapshot">) {
+  return (
+    <div className="session-metrics">
+      <div>
+        <strong>{sleepQuality}/5</strong>
+        <span>Sleep quality</span>
+      </div>
+      <div>
+        <strong>{participantNameSnapshot}</strong>
+        <span>Participant</span>
+      </div>
+    </div>
+  );
+});
 
 export function ActiveSessionView({
   session,
@@ -39,51 +113,23 @@ export function ActiveSessionView({
 
   return (
     <div className="mobile-screen mobile-screen--centered">
-      <div className="active-header">
-        <p>{session.courseNameSnapshot}</p>
-        <span>Started at {formatClock(session.startTime)}</span>
-      </div>
+      <ActiveHeader
+        courseNameSnapshot={session.courseNameSnapshot}
+        startTime={session.startTime}
+      />
 
-      <div className="timer-stage">
-        <svg className="timer-stage__dial" viewBox="0 0 100 100">
-          <circle className="timer-stage__track" cx="50" cy="50" r="44" />
-          <circle
-            className="timer-stage__progress"
-            cx="50"
-            cy="50"
-            r="44"
-            pathLength="100"
-            stroke="var(--color-primary)"
-            strokeDasharray="100 0"
-          />
-        </svg>
-        <div className="timer-stage__content">
-          <strong>
-            {elapsedMinutes}:{String(elapsedSeconds).padStart(2, "0")}
-          </strong>
-          <span>Elapsed time</span>
-        </div>
-      </div>
+      <TimerStage elapsedMinutes={elapsedMinutes} elapsedSeconds={elapsedSeconds} />
 
-      <div className="yawn-counter">
-        <strong>{session.yawns.length}</strong>
-        <span>yawn{session.yawns.length === 1 ? "" : "s"} logged</span>
-      </div>
+      <YawnCounter count={session.yawns.length} />
 
       <YawnButton isPulsing={isPulsing} onClick={handleLogYawn} />
 
       <SleepinessScale onChange={handleSleepinessChange} value={sleepiness} />
 
-      <div className="session-metrics">
-        <div>
-          <strong>{session.sleepQuality}/5</strong>
-          <span>Sleep quality</span>
-        </div>
-        <div>
-          <strong>{session.participantNameSnapshot}</strong>
-          <span>Participant</span>
-        </div>
-      </div>
+      <SessionMeta
+        participantNameSnapshot={session.participantNameSnapshot}
+        sleepQuality={session.sleepQuality}
+      />
 
       <button className="text-button text-button--danger" onClick={handleManualEnd} type="button">
         End session

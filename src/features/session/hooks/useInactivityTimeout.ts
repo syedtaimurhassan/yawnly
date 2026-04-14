@@ -7,6 +7,11 @@ export function useInactivityTimeout(
 ) {
   const lastActivityRef = useRef(Date.now());
   const hasTimedOutRef = useRef(false);
+  const onTimeoutRef = useRef(onTimeout);
+
+  useEffect(() => {
+    onTimeoutRef.current = onTimeout;
+  }, [onTimeout]);
 
   const markActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
@@ -25,13 +30,12 @@ export function useInactivityTimeout(
       const idleDuration = Date.now() - lastActivityRef.current;
       if (!hasTimedOutRef.current && idleDuration >= timeoutMs) {
         hasTimedOutRef.current = true;
-        onTimeout();
+        onTimeoutRef.current();
       }
     }, 1_000);
 
     return () => window.clearInterval(interval);
-  }, [enabled, onTimeout, timeoutMs]);
+  }, [enabled, timeoutMs]);
 
   return { markActivity };
 }
-

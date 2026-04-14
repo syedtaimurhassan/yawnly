@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type {
   SessionEndReason,
   StudySession,
@@ -29,29 +29,33 @@ export function useActiveSession({
   );
 
   useEffect(() => {
+    setElapsedMs(getSessionDurationMs(session));
+  }, [session.startTime]);
+
+  useEffect(() => {
     const interval = window.setInterval(() => {
       setElapsedMs(getSessionDurationMs(session));
     }, 1_000);
 
     return () => window.clearInterval(interval);
-  }, [session]);
+  }, [session.startTime]);
 
-  function handleSleepinessChange(value: number) {
+  const handleSleepinessChange = useCallback((value: number) => {
     markActivity();
     setSleepiness(value);
-  }
+  }, [markActivity]);
 
-  function handleLogYawn() {
+  const handleLogYawn = useCallback(() => {
     markActivity();
     onLogYawn(sleepiness);
     setIsPulsing(true);
     window.setTimeout(() => setIsPulsing(false), 420);
-  }
+  }, [markActivity, onLogYawn, sleepiness]);
 
-  function handleManualEnd() {
+  const handleManualEnd = useCallback(() => {
     markActivity();
     onEndSession("manual");
-  }
+  }, [markActivity, onEndSession]);
 
   return {
     elapsedMs,
@@ -62,4 +66,3 @@ export function useActiveSession({
     handleSleepinessChange,
   };
 }
-

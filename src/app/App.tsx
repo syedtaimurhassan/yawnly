@@ -1,10 +1,17 @@
-import { Suspense, lazy, useEffect, useMemo, useState } from "react";
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { AppView } from "@/app/view-state";
 import type { Course } from "@/features/courses/model/course.types";
 import { ParticipantEntryScreen } from "@/features/participants/components/ParticipantEntryScreen";
 import type { ParticipantProfile } from "@/features/participants/model/participant.types";
-import { useAnalytics } from "@/features/analytics/hooks/useAnalytics";
+import { buildAnalyticsSnapshot } from "@/features/analytics/hooks/useAnalytics";
 import { ActiveSessionView } from "@/features/session/components/ActiveSessionView";
 import { SessionSetupForm } from "@/features/session/components/SessionSetupForm";
 import type {
@@ -71,6 +78,7 @@ export function App() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [lastCompletedSessionId, setLastCompletedSessionId] = useState<string | null>(null);
+  const [screenBusy, setScreenBusy] = useState(false);
   const [actionBusy, setActionBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(
@@ -85,7 +93,8 @@ export function App() {
       : localRepository;
   const waitingForRepository =
     settings.storageMode === "firebase" && firebaseReady && !firebaseRepository;
-  const busy = actionBusy || waitingForRepository;
+  const blockingBusy = screenBusy || waitingForRepository;
+  const busy = actionBusy || blockingBusy;
 
   const currentSession =
     sessions.find((session) => session.id === currentSessionId) ??
@@ -95,7 +104,17 @@ export function App() {
     sessions.find((session) => session.id === lastCompletedSessionId) ??
     sessions.find((session) => session.status === "completed") ??
     null;
-  const analytics = useAnalytics(sessions, latestCompletedSession);
+  const hasInsights = useMemo(
+    () => sessions.some((session) => session.status === "completed"),
+    [sessions],
+  );
+  const analytics = useMemo(
+    () =>
+      view === "analytics"
+        ? buildAnalyticsSnapshot(sessions, latestCompletedSession)
+        : null,
+    [latestCompletedSession, sessions, view],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -155,24 +174,41 @@ export function App() {
     };
   }, [firebaseReady]);
 
-  async function persistSession(nextSession: StudySession) {
+  const upsertSessionLocally = useCallback((nextSession: StudySession) => {
+    setSessions((current) => {
+      const existingIndex = current.findIndex((session) => session.id === nextSession.id);
+      if (existingIndex >= 0) {
+        const existing = current[existingIndex];
+        if (existing.updatedAt > nextSession.updatedAt) {
+          return current;
+        }
+
+        return current
+          .map((session, index) => (index === existingIndex ? nextSession : session))
+          .sort((left, right) => right.startTime - left.startTime);
+      }
+
+      return [nextSession, ...current].sort((left, right) => right.startTime - left.startTime);
+    });
+  }, []);
+
+  const persistSession = useCallback(async (nextSession: StudySession) => {
     if (!participant) {
       throw new Error("Load a participant workspace before saving a session.");
     }
 
     const saved = await activeRepository.upsertSession(participant.nameKey, nextSession);
-    setSessions((current) => {
-      const existingIndex = current.findIndex((session) => session.id === saved.id);
-      if (existingIndex >= 0) {
-        return current
-          .map((session, index) => (index === existingIndex ? saved : session))
-          .sort((left, right) => right.startTime - left.startTime);
-      }
-
-      return [saved, ...current].sort((left, right) => right.startTime - left.startTime);
-    });
+    upsertSessionLocally(saved);
     return saved;
-  }
+  }, [activeRepository, participant, upsertSessionLocally]);
+
+  const syncSessionInBackground = useCallback((nextSession: StudySession) => {
+    upsertSessionLocally(nextSession);
+    void persistSession(nextSession).catch((error: unknown) => {
+      setErrorMessage(getActionableErrorMessage(error));
+    });
+    return nextSession;
+  }, [persistSession, upsertSessionLocally]);
 
   function resetWorkspace(message: string) {
     setParticipant(null);
@@ -185,7 +221,7 @@ export function App() {
   }
 
   async function handleLoadParticipant(displayName: string) {
-    setActionBusy(true);
+    setScreenBusy(true);
     setErrorMessage(null);
 
     try {
@@ -214,7 +250,7 @@ export function App() {
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
     } finally {
-      setActionBusy(false);
+      setScreenBusy(false);
     }
   }
 
@@ -281,20 +317,17 @@ export function App() {
   }
 
   async function handleStartSession(input: StartSessionInput) {
-    setActionBusy(true);
     setErrorMessage(null);
 
     try {
       const nextSession = createStudySession(input, activeRepository.kind);
-      const saved = await persistSession(nextSession);
+      const saved = syncSessionInBackground(nextSession);
       setCurrentSessionId(saved.id);
       setLastCompletedSessionId(null);
       setView("active");
       setInfoMessage(`Started a new session for ${saved.participantNameSnapshot}.`);
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
-    } finally {
-      setActionBusy(false);
     }
   }
 
@@ -303,15 +336,12 @@ export function App() {
       return;
     }
 
-    setActionBusy(true);
     setErrorMessage(null);
 
     try {
-      await persistSession(appendYawn(currentSession, sleepiness, activeRepository.kind));
+      syncSessionInBackground(appendYawn(currentSession, sleepiness, activeRepository.kind));
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
-    } finally {
-      setActionBusy(false);
     }
   }
 
@@ -320,11 +350,10 @@ export function App() {
       return;
     }
 
-    setActionBusy(true);
     setErrorMessage(null);
 
     try {
-      const completed = await persistSession(
+      const completed = syncSessionInBackground(
         completeSession(currentSession, reason, activeRepository.kind),
       );
       setCurrentSessionId(null);
@@ -333,8 +362,6 @@ export function App() {
       setInfoMessage(`Saved the completed session for ${completed.participantNameSnapshot}.`);
     } catch (error) {
       setErrorMessage(getActionableErrorMessage(error));
-    } finally {
-      setActionBusy(false);
     }
   }
 
@@ -413,7 +440,7 @@ export function App() {
           <div className="banner banner--danger">{errorMessage}</div>
         ) : null}
 
-        {busy ? (
+        {blockingBusy ? (
           <div className="mobile-screen">
             <EmptyState
               title="Loading your workspace"
@@ -436,7 +463,7 @@ export function App() {
           <SessionSetupForm
             busy={busy}
             courses={courses}
-            hasInsights={analytics.overview.sessionCount > 0}
+            hasInsights={hasInsights}
             onCreateCourse={handleCreateCourse}
             onOpenSettings={() => setSettingsOpen(true)}
             onRemoveCourse={handleRemoveCourse}
@@ -475,14 +502,14 @@ export function App() {
         ) : null}
 
         {!busy && participant && view === "analytics" ? (
-          analytics.overview.sessionCount === 0 ? (
+          analytics && analytics.overview.sessionCount === 0 ? (
             <div className="mobile-screen">
               <EmptyState
                 title="No completed sessions yet"
                 description="Finish at least one study session to unlock reflection and trend views."
               />
             </div>
-          ) : (
+          ) : analytics ? (
             <Suspense
               fallback={
                 <div className="mobile-screen">
@@ -500,7 +527,7 @@ export function App() {
                 participantName={participant.displayName}
               />
             </Suspense>
-          )
+          ) : null
         ) : null}
       </div>
     </div>

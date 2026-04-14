@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cx } from "@/lib/classNames";
 
 interface SleepinessScaleProps {
@@ -5,7 +6,10 @@ interface SleepinessScaleProps {
   onChange: (value: number) => void;
 }
 
-export function SleepinessScale({ value, onChange }: SleepinessScaleProps) {
+export const SleepinessScale = memo(function SleepinessScale({
+  value,
+  onChange,
+}: SleepinessScaleProps) {
   return (
     <div className="scale-card">
       <p className="scale-card__title">How sleepy are you right now?</p>
@@ -33,4 +37,4 @@ export function SleepinessScale({ value, onChange }: SleepinessScaleProps) {
       </div>
     </div>
   );
-}
+});

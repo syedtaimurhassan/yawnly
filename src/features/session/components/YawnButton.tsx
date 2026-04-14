@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cx } from "@/lib/classNames";
 
 interface YawnButtonProps {
@@ -5,7 +6,7 @@ interface YawnButtonProps {
   onClick: () => void;
 }
 
-export function YawnButton({ isPulsing, onClick }: YawnButtonProps) {
+export const YawnButton = memo(function YawnButton({ isPulsing, onClick }: YawnButtonProps) {
   return (
     <button
       className={cx("yawn-button", isPulsing && "yawn-button--pulse")}
@@ -16,5 +17,4 @@ export function YawnButton({ isPulsing, onClick }: YawnButtonProps) {
       <span className="yawn-button__label">Tap to log a yawn</span>
     </button>
   );
-}
-
+});

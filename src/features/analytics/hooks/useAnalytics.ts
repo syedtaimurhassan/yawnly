@@ -15,14 +15,19 @@ export interface AnalyticsSnapshot {
   latestTimeline: Array<{ label: string; yawns: number }>;
 }
 
-export function useAnalytics(sessions: StudySession[], latestSession: StudySession | null) {
-  const snapshot: AnalyticsSnapshot = {
+export function buildAnalyticsSnapshot(
+  sessions: StudySession[],
+  latestSession: StudySession | null,
+): AnalyticsSnapshot {
+  return {
     byCourse: selectYawnsByCourse(sessions),
     dailyTrend: selectDailyTrend(sessions),
     sleepImpact: selectSleepImpact(sessions),
     overview: selectOverviewStats(sessions),
     latestTimeline: latestSession ? selectTimelineBuckets(latestSession) : [],
   };
+}
 
-  return snapshot;
+export function useAnalytics(sessions: StudySession[], latestSession: StudySession | null) {
+  return buildAnalyticsSnapshot(sessions, latestSession);
 }
