@@ -11,7 +11,12 @@ import { ChartCard } from "@/components/charts/ChartCard";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
 
 interface SleepImpactChartProps {
-  data: Array<{ avgYawnsPerHour: number; label: string; sessionCount: number; sessionsWithYawnsPct: number }>;
+  data: Array<{
+    avgFirstYawnMinute: number | null;
+    label: string;
+    sessionCount: number;
+    sessionsWithYawnsPct: number;
+  }>;
 }
 
 const BAR_COLORS = [
@@ -25,13 +30,13 @@ const BAR_COLORS = [
 export function SleepImpactChart({ data }: SleepImpactChartProps) {
   return (
     <ChartCard
-      title="Fatigue and sleep"
-      description="Compare fatigue rate after different sleep quality ratings from the night before."
+      title="How sleep seems to affect sessions"
+      description="Higher bars mean yawns showed up in more sessions. Sleep is rated from 1 for very poor to 5 for very good."
     >
       <ResponsiveContainer height={220} width="100%">
         <BarChart data={data}>
           <XAxis dataKey="label" />
-          <YAxis tickFormatter={(value) => `${value}/hr`} />
+          <YAxis tickFormatter={(value) => `${value}%`} />
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload || payload.length === 0) {
@@ -43,24 +48,32 @@ export function SleepImpactChart({ data }: SleepImpactChartProps) {
               return (
                 <ChartTooltip
                   active
-                  label={label}
+                  label={`Sleep quality ${label}/5`}
                   payload={[
                     {
                       color: payload[0].color as string,
-                      name: "Yawns per hour",
-                      value: `${entry.avgYawnsPerHour}/hr`,
+                      name: "Sessions with yawns",
+                      value: `${entry.sessionsWithYawnsPct}%`,
                     },
                     {
                       color: "rgba(31, 36, 46, 0.15)",
-                      name: "Sessions with yawns",
-                      value: `${entry.sessionsWithYawnsPct}%`,
+                      name: "Typical first yawn",
+                      value:
+                        entry.avgFirstYawnMinute === null
+                          ? "No yawns yet"
+                          : `${Math.round(entry.avgFirstYawnMinute)} min`,
+                    },
+                    {
+                      color: "rgba(31, 36, 46, 0.15)",
+                      name: "Sessions tracked",
+                      value: entry.sessionCount,
                     },
                   ]}
                 />
               );
             }}
           />
-          <Bar dataKey="avgYawnsPerHour" radius={[10, 10, 0, 0]}>
+          <Bar dataKey="sessionsWithYawnsPct" radius={[10, 10, 0, 0]}>
             {data.map((entry, index) => (
               <Cell fill={BAR_COLORS[index % BAR_COLORS.length]} key={entry.label} />
             ))}

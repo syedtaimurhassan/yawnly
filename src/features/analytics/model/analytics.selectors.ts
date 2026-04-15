@@ -19,7 +19,7 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1_000;
 const TIME_OF_DAY_BUCKETS = ["Morning", "Afternoon", "Evening", "Late night"] as const;
 
 export type DateRangeFilter = "all" | "30d" | "90d";
-export type ComparisonMetric = "yawnsPerHour" | "sessionsWithYawnsPct" | "firstYawnMinute";
+export type ComparisonMetric = "sessionsWithYawnsPct" | "avgYawnsPerSession" | "firstYawnMinute";
 export type TimeOfDayBucket = (typeof TIME_OF_DAY_BUCKETS)[number];
 
 export interface SessionInsight {
@@ -43,47 +43,48 @@ export interface SessionInsight {
   timeOfDayBucket: TimeOfDayBucket;
   totalYawns: number;
   weekdayLabel: string;
-  yawnsPerHour: number;
 }
 
 export interface CourseComparisonDatum {
+  avgYawnsPerSession: number;
   courseId: string;
   firstYawnMinute: number | null;
   name: string;
   sessionCount: number;
   sessionsWithYawnsPct: number;
   totalYawns: number;
-  yawnsPerHour: number;
-}
-
-export interface DailyTrendDatum {
-  label: string;
-  sessionCount: number;
-  yawnsPerHour: number;
 }
 
 export interface SleepImpactDatum {
-  avgYawnsPerHour: number;
+  avgFirstYawnMinute: number | null;
   label: string;
   sessionCount: number;
   sessionsWithYawnsPct: number;
 }
 
 export interface TimeOfDayImpactDatum {
+  avgFirstYawnMinute: number | null;
   label: TimeOfDayBucket;
   sessionCount: number;
-  yawnsPerHour: number;
+  sessionsWithYawnsPct: number;
 }
 
 export interface OverviewStats {
   avgFirstYawnMinute: number | null;
-  avgYawnRate: number;
   sessionCount: number;
   sessionsWithYawnsPct: number;
 }
 
 function roundValue(value: number, digits = 1) {
   return Number(value.toFixed(digits));
+}
+
+function average(values: number[], digits = 1) {
+  if (values.length === 0) {
+    return null;
+  }
+
+  return roundValue(values.reduce((sum, value) => sum + value, 0) / values.length, digits);
 }
 
 function completedSessions(sessions: StudySession[]) {
@@ -209,7 +210,6 @@ export function selectSessionInsights(sessions: StudySession[]): SessionInsight[
         timeOfDayBucket: getTimeOfDayBucket(session.startTime),
         totalYawns,
         weekdayLabel: formatShortWeekday(session.startTime),
-        yawnsPerHour: roundValue(totalYawns / (durationMinutes / 60)),
       };
     })
     .sort((left, right) => right.startTime - left.startTime);
@@ -249,7 +249,6 @@ export function selectCourseComparison(insights: SessionInsight[]): CourseCompar
       name: string;
       sessionCount: number;
       sessionsWithYawns: number;
-      totalDurationMinutes: number;
       totalYawns: number;
     }
   >();
@@ -260,16 +259,16 @@ export function selectCourseComparison(insights: SessionInsight[]): CourseCompar
       name: insight.courseName,
       sessionCount: 0,
       sessionsWithYawns: 0,
-      totalDurationMinutes: 0,
       totalYawns: 0,
     };
 
     current.sessionCount += 1;
     current.totalYawns += insight.totalYawns;
-    current.totalDurationMinutes += insight.durationMinutes;
+
     if (insight.hasAnyYawn) {
       current.sessionsWithYawns += 1;
     }
+
     if (insight.firstYawnMinute !== null) {
       current.firstYawnMinutes.push(insight.firstYawnMinute);
     }
@@ -279,21 +278,21 @@ export function selectCourseComparison(insights: SessionInsight[]): CourseCompar
 
   return [...aggregates.entries()]
     .map(([courseId, value]) => ({
+      avgYawnsPerSession: roundValue(value.totalYawns / value.sessionCount),
       courseId,
-      firstYawnMinute:
-        value.firstYawnMinutes.length > 0
-          ? roundValue(
-              value.firstYawnMinutes.reduce((sum, minute) => sum + minute, 0) /
-                value.firstYawnMinutes.length,
-            )
-          : null,
+      firstYawnMinute: average(value.firstYawnMinutes),
       name: value.name,
       sessionCount: value.sessionCount,
       sessionsWithYawnsPct: roundValue((value.sessionsWithYawns / value.sessionCount) * 100, 0),
       totalYawns: value.totalYawns,
-      yawnsPerHour: roundValue(value.totalYawns / (value.totalDurationMinutes / 60)),
     }))
-    .sort((left, right) => right.yawnsPerHour - left.yawnsPerHour);
+    .sort((left, right) => {
+      if (right.sessionsWithYawnsPct !== left.sessionsWithYawnsPct) {
+        return right.sessionsWithYawnsPct - left.sessionsWithYawnsPct;
+      }
+
+      return right.avgYawnsPerSession - left.avgYawnsPerSession;
+    });
 }
 
 export function getComparisonMetricValue(
@@ -308,7 +307,12 @@ export function getComparisonMetricValue(
     return datum.firstYawnMinute ?? 0;
   }
 
-  return datum.yawnsPerHour;
+  return datum.avgYawnsPerSession;
+}
+
+export function formatYawnCount(value: number) {
+  const rounded = roundValue(value);
+  return `${rounded} ${rounded === 1 ? "yawn" : "yawns"}`;
 }
 
 export function formatComparisonMetricValue(
@@ -316,7 +320,26 @@ export function formatComparisonMetricValue(
   value: number | null,
 ) {
   if (value === null) {
-    return "No yawns";
+    return "No yawns yet";
+  }
+
+  if (metric === "sessionsWithYawnsPct") {
+    return `${roundValue(value, 0)}% of sessions`;
+  }
+
+  if (metric === "firstYawnMinute") {
+    return `Around ${roundValue(value, 0)} min`;
+  }
+
+  return `${formatYawnCount(value)} per session`;
+}
+
+export function formatCompactComparisonMetricValue(
+  metric: ComparisonMetric,
+  value: number | null,
+) {
+  if (value === null) {
+    return "-";
   }
 
   if (metric === "sessionsWithYawnsPct") {
@@ -324,67 +347,31 @@ export function formatComparisonMetricValue(
   }
 
   if (metric === "firstYawnMinute") {
-    return `${roundValue(value)}m`;
+    return `${roundValue(value, 0)}m`;
   }
 
-  return `${roundValue(value)}/hr`;
-}
-
-export function selectDailyTrend(insights: SessionInsight[]): DailyTrendDatum[] {
-  const aggregates = new Map<
-    string,
-    { label: string; sessionCount: number; totalDurationMinutes: number; totalYawns: number }
-  >();
-
-  for (const insight of insights) {
-    const current = aggregates.get(insight.dateKey) ?? {
-      label: insight.dateLabel,
-      sessionCount: 0,
-      totalDurationMinutes: 0,
-      totalYawns: 0,
-    };
-
-    current.sessionCount += 1;
-    current.totalDurationMinutes += insight.durationMinutes;
-    current.totalYawns += insight.totalYawns;
-    aggregates.set(insight.dateKey, current);
-  }
-
-  return [...aggregates.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .map(([, value]) => ({
-      label: value.label,
-      sessionCount: value.sessionCount,
-      yawnsPerHour: roundValue(value.totalYawns / (value.totalDurationMinutes / 60)),
-    }));
+  return `${roundValue(value)}`;
 }
 
 export function selectSleepImpact(insights: SessionInsight[]): SleepImpactDatum[] {
   const aggregates = new Map<
     number,
-    {
-      label: string;
-      sessionCount: number;
-      sessionsWithYawns: number;
-      totalDurationMinutes: number;
-      totalYawns: number;
-    }
+    { firstYawnMinutes: number[]; sessionCount: number; sessionsWithYawns: number }
   >();
 
   for (const insight of insights) {
     const current = aggregates.get(insight.sleepQuality) ?? {
-      label: `${insight.sleepQuality}/5`,
+      firstYawnMinutes: [],
       sessionCount: 0,
       sessionsWithYawns: 0,
-      totalDurationMinutes: 0,
-      totalYawns: 0,
     };
 
     current.sessionCount += 1;
-    current.totalDurationMinutes += insight.durationMinutes;
-    current.totalYawns += insight.totalYawns;
     if (insight.hasAnyYawn) {
       current.sessionsWithYawns += 1;
+    }
+    if (insight.firstYawnMinute !== null) {
+      current.firstYawnMinutes.push(insight.firstYawnMinute);
     }
 
     aggregates.set(insight.sleepQuality, current);
@@ -392,9 +379,9 @@ export function selectSleepImpact(insights: SessionInsight[]): SleepImpactDatum[
 
   return [...aggregates.entries()]
     .sort((left, right) => left[0] - right[0])
-    .map(([, value]) => ({
-      avgYawnsPerHour: roundValue(value.totalYawns / (value.totalDurationMinutes / 60)),
-      label: value.label,
+    .map(([sleepQuality, value]) => ({
+      avgFirstYawnMinute: average(value.firstYawnMinutes),
+      label: String(sleepQuality),
       sessionCount: value.sessionCount,
       sessionsWithYawnsPct: roundValue((value.sessionsWithYawns / value.sessionCount) * 100, 0),
     }));
@@ -403,19 +390,24 @@ export function selectSleepImpact(insights: SessionInsight[]): SleepImpactDatum[
 export function selectTimeOfDayImpact(insights: SessionInsight[]): TimeOfDayImpactDatum[] {
   const aggregates = new Map<
     TimeOfDayBucket,
-    { sessionCount: number; totalDurationMinutes: number; totalYawns: number }
+    { firstYawnMinutes: number[]; sessionCount: number; sessionsWithYawns: number }
   >();
 
   for (const insight of insights) {
     const current = aggregates.get(insight.timeOfDayBucket) ?? {
+      firstYawnMinutes: [],
       sessionCount: 0,
-      totalDurationMinutes: 0,
-      totalYawns: 0,
+      sessionsWithYawns: 0,
     };
 
     current.sessionCount += 1;
-    current.totalDurationMinutes += insight.durationMinutes;
-    current.totalYawns += insight.totalYawns;
+    if (insight.hasAnyYawn) {
+      current.sessionsWithYawns += 1;
+    }
+    if (insight.firstYawnMinute !== null) {
+      current.firstYawnMinutes.push(insight.firstYawnMinute);
+    }
+
     aggregates.set(insight.timeOfDayBucket, current);
   }
 
@@ -426,9 +418,10 @@ export function selectTimeOfDayImpact(insights: SessionInsight[]): TimeOfDayImpa
     }
 
     return {
+      avgFirstYawnMinute: average(value.firstYawnMinutes),
       label,
       sessionCount: value.sessionCount,
-      yawnsPerHour: roundValue(value.totalYawns / (value.totalDurationMinutes / 60)),
+      sessionsWithYawnsPct: roundValue((value.sessionsWithYawns / value.sessionCount) * 100, 0),
     };
   }).filter((value): value is TimeOfDayImpactDatum => value !== null);
 }
@@ -460,19 +453,9 @@ export function selectOverviewStats(insights: SessionInsight[]): OverviewStats {
   const sessionsWithYawns = insights.filter((insight) => insight.hasAnyYawn).length;
 
   return {
-    avgFirstYawnMinute:
-      insightsWithFirstYawn.length > 0
-        ? roundValue(
-            insightsWithFirstYawn.reduce((sum, insight) => sum + insight.firstYawnMinute, 0) /
-              insightsWithFirstYawn.length,
-          )
-        : null,
-    avgYawnRate:
-      insights.length > 0
-        ? roundValue(
-            insights.reduce((sum, insight) => sum + insight.yawnsPerHour, 0) / insights.length,
-          )
-        : 0,
+    avgFirstYawnMinute: average(
+      insightsWithFirstYawn.map((insight) => insight.firstYawnMinute),
+    ),
     sessionCount: insights.length,
     sessionsWithYawnsPct:
       insights.length > 0 ? roundValue((sessionsWithYawns / insights.length) * 100, 0) : 0,

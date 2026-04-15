@@ -12,6 +12,7 @@ import { ChartTooltip } from "@/components/charts/ChartTooltip";
 import {
   type ComparisonMetric,
   type CourseComparisonDatum,
+  formatCompactComparisonMetricValue,
   formatComparisonMetricValue,
   getComparisonMetricValue,
 } from "@/features/analytics/model/analytics.selectors";
@@ -27,20 +28,20 @@ const METRIC_COPY: Record<
   ComparisonMetric,
   { description: string; label: string; title: string }
 > = {
+  avgYawnsPerSession: {
+    description: "This shows how many yawns usually appear in one tracked session for each course.",
+    label: "Average yawns",
+    title: "Where sessions collect more yawns",
+  },
   firstYawnMinute: {
-    description: "Later first yawns usually mean fatigue cues appear later in the session.",
-    label: "Avg first yawn",
-    title: "First yawn by course",
+    description: "Lower bars mean yawns tend to start earlier in that course. Courses with no yawns sit at the bottom.",
+    label: "Typical first yawn",
+    title: "Where yawns start earliest",
   },
   sessionsWithYawnsPct: {
-    description: "This shows how often a session for each course includes at least one yawn.",
+    description: "This shows how often a tracked session for each course includes at least one yawn.",
     label: "Sessions with yawns",
-    title: "Sessions with yawns by course",
-  },
-  yawnsPerHour: {
-    description: "This normalizes fatigue cues by time, so longer sessions do not look worse just because they lasted longer.",
-    label: "Yawns per hour",
-    title: "Fatigue rate by course",
+    title: "Where yawns show up most often",
   },
 };
 
@@ -57,10 +58,10 @@ export function ContextComparisonChart({
       <ResponsiveContainer height={240} width="100%">
         <BarChart data={data} layout="vertical">
           <XAxis
-            tickFormatter={(value) => formatComparisonMetricValue(metric, Number(value))}
+            tickFormatter={(value) => formatCompactComparisonMetricValue(metric, Number(value))}
             type="number"
           />
-          <YAxis dataKey="name" type="category" width={88} />
+          <YAxis dataKey="name" type="category" width={96} />
           <Tooltip
             content={({ active, payload }) => {
               if (!active || !payload || payload.length === 0) {
@@ -82,12 +83,14 @@ export function ContextComparisonChart({
                       name: copy.label,
                       value: formatComparisonMetricValue(
                         metric,
-                        metric === "firstYawnMinute" ? entry.firstYawnMinute : getComparisonMetricValue(entry, metric),
+                        metric === "firstYawnMinute"
+                          ? entry.firstYawnMinute
+                          : getComparisonMetricValue(entry, metric),
                       ),
                     },
                     {
                       color: "rgba(31, 36, 46, 0.15)",
-                      name: "Sessions",
+                      name: "Sessions tracked",
                       value: entry.sessionCount,
                     },
                   ]}

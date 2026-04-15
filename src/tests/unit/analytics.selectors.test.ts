@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   filterSessionInsights,
   selectCourseComparison,
-  selectDailyTrend,
+  selectOverviewStats,
   selectSessionInsights,
   selectSleepImpact,
+  selectTimeOfDayImpact,
   selectTimelineBuckets,
 } from "@/features/analytics/model/analytics.selectors";
 import type { StudySession } from "@/features/session/model/session.types";
@@ -50,11 +51,10 @@ describe("analytics selectors", () => {
       hasAnyYawn: true,
       maxYawnsIn15MinWindow: 2,
       totalYawns: 3,
-      yawnsPerHour: 6,
     });
   });
 
-  it("builds normalized course, daily, and sleep aggregates", () => {
+  it("builds course, sleep, time-of-day, and overview aggregates in plain-language metrics", () => {
     const sessions = [
       createSession({
         id: "one",
@@ -78,34 +78,39 @@ describe("analytics selectors", () => {
 
     expect(selectCourseComparison(insights)).toEqual([
       {
+        avgYawnsPerSession: 2,
         courseId: "social-graph",
         firstYawnMinute: 5,
         name: "Social Graph",
         sessionCount: 1,
         sessionsWithYawnsPct: 100,
         totalYawns: 2,
-        yawnsPerHour: 4,
       },
       {
+        avgYawnsPerSession: 1,
         courseId: "economics",
         firstYawnMinute: 10,
         name: "Economics",
         sessionCount: 1,
         sessionsWithYawnsPct: 100,
         totalYawns: 1,
-        yawnsPerHour: 1,
       },
     ]);
 
-    expect(selectDailyTrend(insights)).toEqual([
-      { label: "Apr 13", sessionCount: 1, yawnsPerHour: 4 },
-      { label: "Apr 14", sessionCount: 1, yawnsPerHour: 1 },
+    expect(selectSleepImpact(insights)).toEqual([
+      { avgFirstYawnMinute: 5, label: "3", sessionCount: 1, sessionsWithYawnsPct: 100 },
+      { avgFirstYawnMinute: 10, label: "4", sessionCount: 1, sessionsWithYawnsPct: 100 },
     ]);
 
-    expect(selectSleepImpact(insights)).toEqual([
-      { avgYawnsPerHour: 4, label: "3/5", sessionCount: 1, sessionsWithYawnsPct: 100 },
-      { avgYawnsPerHour: 1, label: "4/5", sessionCount: 1, sessionsWithYawnsPct: 100 },
+    expect(selectTimeOfDayImpact(insights)).toEqual([
+      { avgFirstYawnMinute: 7.5, label: "Afternoon", sessionCount: 2, sessionsWithYawnsPct: 100 },
     ]);
+
+    expect(selectOverviewStats(insights)).toEqual({
+      avgFirstYawnMinute: 7.5,
+      sessionCount: 2,
+      sessionsWithYawnsPct: 100,
+    });
   });
 
   it("filters by date range and keeps timeline buckets", () => {
