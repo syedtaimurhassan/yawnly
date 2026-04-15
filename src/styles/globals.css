@@ -755,6 +755,10 @@ p {
   gap: 8px;
 }
 
+.insights-tabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .segmented-control__item {
   border: 0;
   padding: 12px 14px;
@@ -772,6 +776,29 @@ p {
 .segmented-control__item--active {
   background: var(--color-primary);
   color: white;
+}
+
+.insight-callout {
+  display: grid;
+  gap: 8px;
+}
+
+.insight-callout__eyebrow {
+  color: var(--color-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.insight-callout__text {
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+.insight-panel {
+  display: grid;
+  gap: 24px;
 }
 
 @keyframes yawn-pulse {
