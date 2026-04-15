@@ -19,13 +19,13 @@ function createSession(overrides: Partial<StudySession>): StudySession {
     courseNameSnapshot: "Social Graph",
     sleepQuality: 3,
     status: "completed",
-    startTime: Date.parse("2026-04-13T10:00:00.000Z"),
-    endTime: Date.parse("2026-04-13T10:30:00.000Z"),
+    startTime: Date.parse("2026-04-13T14:00:00.000Z"),
+    endTime: Date.parse("2026-04-13T14:30:00.000Z"),
     endReason: "manual",
     yawns: [],
     source: "local",
-    createdAt: Date.parse("2026-04-13T10:00:00.000Z"),
-    updatedAt: Date.parse("2026-04-13T10:30:00.000Z"),
+    createdAt: Date.parse("2026-04-13T14:00:00.000Z"),
+    updatedAt: Date.parse("2026-04-13T14:30:00.000Z"),
     ...overrides,
   };
 }
@@ -35,9 +35,9 @@ describe("analytics selectors", () => {
     const insights = selectSessionInsights([
       createSession({
         yawns: [
-          { id: "a", timestamp: Date.parse("2026-04-13T10:05:00.000Z"), sleepiness: 2 },
-          { id: "b", timestamp: Date.parse("2026-04-13T10:08:00.000Z"), sleepiness: 4 },
-          { id: "c", timestamp: Date.parse("2026-04-13T10:24:00.000Z"), sleepiness: 5 },
+          { id: "a", timestamp: Date.parse("2026-04-13T14:05:00.000Z"), sleepiness: 2 },
+          { id: "b", timestamp: Date.parse("2026-04-13T14:08:00.000Z"), sleepiness: 4 },
+          { id: "c", timestamp: Date.parse("2026-04-13T14:24:00.000Z"), sleepiness: 5 },
         ],
       }),
     ]);
@@ -59,18 +59,18 @@ describe("analytics selectors", () => {
       createSession({
         id: "one",
         yawns: [
-          { id: "a", timestamp: Date.parse("2026-04-13T10:05:00.000Z"), sleepiness: 2 },
-          { id: "b", timestamp: Date.parse("2026-04-13T10:10:00.000Z"), sleepiness: 3 },
+          { id: "a", timestamp: Date.parse("2026-04-13T14:05:00.000Z"), sleepiness: 2 },
+          { id: "b", timestamp: Date.parse("2026-04-13T14:10:00.000Z"), sleepiness: 3 },
         ],
       }),
       createSession({
         id: "two",
         courseId: "economics",
         courseNameSnapshot: "Economics",
-        startTime: Date.parse("2026-04-14T10:00:00.000Z"),
-        endTime: Date.parse("2026-04-14T11:00:00.000Z"),
+        startTime: Date.parse("2026-04-14T14:00:00.000Z"),
+        endTime: Date.parse("2026-04-14T15:00:00.000Z"),
         sleepQuality: 4,
-        yawns: [{ id: "c", timestamp: Date.parse("2026-04-14T10:10:00.000Z"), sleepiness: 4 }],
+        yawns: [{ id: "c", timestamp: Date.parse("2026-04-14T14:10:00.000Z"), sleepiness: 4 }],
       }),
     ];
 
@@ -117,14 +117,14 @@ describe("analytics selectors", () => {
     const sessions = [
       createSession({
         id: "recent",
-        startTime: Date.parse("2026-04-10T10:00:00.000Z"),
-        endTime: Date.parse("2026-04-10T10:20:00.000Z"),
-        yawns: [{ id: "a", timestamp: Date.parse("2026-04-10T10:02:00.000Z"), sleepiness: 2 }],
+        startTime: Date.parse("2026-04-10T14:00:00.000Z"),
+        endTime: Date.parse("2026-04-10T14:20:00.000Z"),
+        yawns: [{ id: "a", timestamp: Date.parse("2026-04-10T14:02:00.000Z"), sleepiness: 2 }],
       }),
       createSession({
         id: "old",
-        startTime: Date.parse("2025-12-01T10:00:00.000Z"),
-        endTime: Date.parse("2025-12-01T10:20:00.000Z"),
+        startTime: Date.parse("2025-12-01T14:00:00.000Z"),
+        endTime: Date.parse("2025-12-01T14:20:00.000Z"),
       }),
     ];
 
