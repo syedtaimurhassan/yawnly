@@ -580,6 +580,59 @@ p {
   gap: 12px;
 }
 
+.yawn-log-card {
+  width: 100%;
+  display: grid;
+  gap: 14px;
+}
+
+.yawn-log-card__header {
+  display: grid;
+  gap: 10px;
+}
+
+.yawn-log-list {
+  display: grid;
+  gap: 10px;
+}
+
+.yawn-log-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(235, 231, 224, 0.72);
+}
+
+.yawn-log-item__meta,
+.yawn-log-item__actions {
+  display: grid;
+  gap: 4px;
+}
+
+.yawn-log-item__meta strong {
+  font-size: 0.96rem;
+}
+
+.yawn-log-item__meta span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.yawn-log-item__actions {
+  justify-items: end;
+}
+
+.yawn-log-badge {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--color-text);
+  font-size: 0.78rem;
+}
+
 .scale-card__title {
   color: var(--color-muted);
   text-align: center;
@@ -923,6 +976,15 @@ p {
   .session-metrics,
   .stats-grid {
     grid-template-columns: 1fr;
+  }
+
+  .yawn-log-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .yawn-log-item__actions {
+    justify-items: start;
   }
 
   .inline-form {

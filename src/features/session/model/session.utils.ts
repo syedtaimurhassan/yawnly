@@ -62,6 +62,25 @@ export function appendYawn(
   };
 }
 
+export function removeYawn(
+  session: StudySession,
+  yawnId: string,
+  source: StorageMode,
+): StudySession {
+  const nextYawns = session.yawns.filter((yawn) => yawn.id !== yawnId);
+
+  if (nextYawns.length === session.yawns.length) {
+    return session;
+  }
+
+  return {
+    ...session,
+    yawns: nextYawns,
+    source,
+    updatedAt: Date.now(),
+  };
+}
+
 export function completeSession(
   session: StudySession,
   endReason: SessionEndReason,

@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import type { SessionEndReason } from "@/features/session/model/session.types";
+import type { SessionEndReason, YawnEvent } from "@/features/session/model/session.types";
+import { LoggedYawnsCard } from "@/features/session/components/LoggedYawnsCard";
 import { YawnButton } from "@/features/session/components/YawnButton";
 import { SleepinessScale } from "@/features/session/components/SleepinessScale";
 import { useInactivityTimeout } from "@/features/session/hooks/useInactivityTimeout";
@@ -9,11 +10,13 @@ interface ActiveSessionViewProps {
   courseNameSnapshot: string;
   inactivityTimeoutMs: number;
   onLogYawn: (sleepiness: number) => void;
+  onRemoveYawn: (yawnId: string) => void;
   onEndSession: (reason: SessionEndReason) => void;
   participantNameSnapshot: string;
   sleepQuality: number;
   startTime: number;
   yawnCount: number;
+  yawns: YawnEvent[];
 }
 
 const ActiveHeader = memo(function ActiveHeader({
@@ -136,14 +139,17 @@ export const ActiveSessionView = memo(function ActiveSessionView({
   courseNameSnapshot,
   inactivityTimeoutMs,
   onLogYawn,
+  onRemoveYawn,
   onEndSession,
   participantNameSnapshot,
   sleepQuality,
   startTime,
   yawnCount,
+  yawns,
 }: ActiveSessionViewProps) {
   const sleepinessRef = useRef(1);
   const onLogYawnRef = useRef(onLogYawn);
+  const onRemoveYawnRef = useRef(onRemoveYawn);
   const onEndSessionRef = useRef(onEndSession);
   const { markActivity } = useInactivityTimeout(
     inactivityTimeoutMs,
@@ -154,6 +160,10 @@ export const ActiveSessionView = memo(function ActiveSessionView({
   useEffect(() => {
     onLogYawnRef.current = onLogYawn;
   }, [onLogYawn]);
+
+  useEffect(() => {
+    onRemoveYawnRef.current = onRemoveYawn;
+  }, [onRemoveYawn]);
 
   useEffect(() => {
     onEndSessionRef.current = onEndSession;
@@ -174,6 +184,11 @@ export const ActiveSessionView = memo(function ActiveSessionView({
     markActivity();
   }, [markActivity]);
 
+  const handleRemoveYawn = useCallback((yawnId: string) => {
+    markActivity();
+    onRemoveYawnRef.current(yawnId);
+  }, [markActivity]);
+
   return (
     <div className="mobile-screen mobile-screen--centered">
       <ActiveHeader courseNameSnapshot={courseNameSnapshot} startTime={startTime} />
@@ -185,6 +200,12 @@ export const ActiveSessionView = memo(function ActiveSessionView({
       <YawnButton onClick={handleLogYawn} />
 
       <SleepinessScale onChange={handleSleepinessChange} />
+
+      <LoggedYawnsCard
+        onRemoveYawn={handleRemoveYawn}
+        startTime={startTime}
+        yawns={yawns}
+      />
 
       <SessionMeta
         participantNameSnapshot={participantNameSnapshot}

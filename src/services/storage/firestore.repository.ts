@@ -170,21 +170,33 @@ export function createFirestoreRepository(): DataRepository {
         maxSleepiness: getMaxSleepiness(session),
       });
 
-      session.yawns.forEach((yawn) => {
-        batch.set(
-          doc(db, `${participantDocumentPath(participantKey)}/sessions/${session.id}/yawnEvents/${yawn.id}`),
-          {
-            ...yawn,
-            participantKey,
-            participantNameSnapshot: session.participantNameSnapshot,
-            sessionId: session.id,
-            courseId: session.courseId,
-            courseNameSnapshot: session.courseNameSnapshot,
-            sleepQuality: session.sleepQuality,
-            source: session.source,
-          },
-        );
-      });
+      if (session.status === "completed") {
+        const yawnEventsPath = `${participantDocumentPath(participantKey)}/sessions/${session.id}/yawnEvents`;
+        const existingYawnEvents = await getDocs(collection(db, yawnEventsPath));
+        const currentYawnIds = new Set(session.yawns.map((yawn) => yawn.id));
+
+        session.yawns.forEach((yawn) => {
+          batch.set(
+            doc(db, `${yawnEventsPath}/${yawn.id}`),
+            {
+              ...yawn,
+              participantKey,
+              participantNameSnapshot: session.participantNameSnapshot,
+              sessionId: session.id,
+              courseId: session.courseId,
+              courseNameSnapshot: session.courseNameSnapshot,
+              sleepQuality: session.sleepQuality,
+              source: session.source,
+            },
+          );
+        });
+
+        existingYawnEvents.forEach((documentSnapshot) => {
+          if (!currentYawnIds.has(documentSnapshot.id)) {
+            batch.delete(documentSnapshot.ref);
+          }
+        });
+      }
 
       await batch.commit();
       return session;

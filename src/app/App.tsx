@@ -26,6 +26,7 @@ import {
   createCourse,
   createStudySession,
   isActiveSession,
+  removeYawn,
 } from "@/features/session/model/session.utils";
 import { SettingsSheet } from "@/features/settings/components/SettingsSheet";
 import type { StorageMode } from "@/features/settings/model/settings.types";
@@ -381,6 +382,26 @@ export function App() {
     }
   }, [activeRepository.kind, syncActiveSessionInBackground]);
 
+  const handleRemoveYawn = useCallback(async (yawnId: string) => {
+    const session = currentSessionRef.current;
+    if (!session) {
+      return;
+    }
+
+    setErrorMessage(null);
+
+    try {
+      const nextSession = removeYawn(session, yawnId, activeRepository.kind);
+      if (nextSession === session) {
+        return;
+      }
+
+      syncActiveSessionInBackground(nextSession);
+    } catch (error) {
+      setErrorMessage(getActionableErrorMessage(error));
+    }
+  }, [activeRepository.kind, syncActiveSessionInBackground]);
+
   const handleEndSession = useCallback(async (reason: SessionEndReason) => {
     const session = currentSessionRef.current;
     if (!session) {
@@ -522,10 +543,12 @@ export function App() {
             inactivityTimeoutMs={settings.inactivityTimeoutMs}
             onEndSession={handleEndSession}
             onLogYawn={handleLogYawn}
+            onRemoveYawn={handleRemoveYawn}
             participantNameSnapshot={currentSession.participantNameSnapshot}
             sleepQuality={currentSession.sleepQuality}
             startTime={currentSession.startTime}
             yawnCount={currentSession.yawns.length}
+            yawns={currentSession.yawns}
           />
         ) : null}
 
