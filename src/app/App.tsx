@@ -549,7 +549,7 @@ export function App() {
         ) : null}
 
         {!busy && participant && view === "analytics" ? (
-          analytics && analytics.overview.sessionCount === 0 ? (
+          analytics && analytics.sessionInsights.length === 0 ? (
             <div className="mobile-screen">
               <EmptyState
                 title="No completed sessions yet"

@@ -13,6 +13,12 @@
   --color-fatigue-low: #4db388;
   --color-fatigue-mid: #d1a347;
   --color-fatigue-high: #d76742;
+  --color-highlight: #d18147;
+  --color-heat-1: #e8f3ec;
+  --color-heat-2: #bfdccf;
+  --color-heat-3: #d8c58f;
+  --color-heat-4: #d49a65;
+  --color-heat-5: #cb7657;
   --shadow-soft: 0 18px 40px rgba(31, 36, 46, 0.06);
   --shadow-card: 0 8px 20px rgba(31, 36, 46, 0.05);
   --radius-lg: 24px;

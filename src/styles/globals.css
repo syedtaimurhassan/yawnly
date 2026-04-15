@@ -801,6 +801,107 @@ p {
   gap: 24px;
 }
 
+.insight-filter-card,
+.insight-actions,
+.insight-drilldown,
+.insight-session-context {
+  display: grid;
+  gap: 16px;
+}
+
+.insight-filter-group {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-range-control {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.insight-focus-row {
+  display: grid;
+  gap: 8px;
+}
+
+.insight-focus-row__controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.insight-action-list,
+.insight-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-action-item {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(235, 231, 224, 0.78);
+}
+
+.insight-action-item strong {
+  font-size: 0.96rem;
+}
+
+.insight-action-item p {
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.insight-session-card {
+  border: 1px solid rgba(229, 226, 220, 0.8);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(235, 231, 224, 0.72);
+  text-align: left;
+  color: var(--color-text);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+}
+
+.insight-session-card--active {
+  border-color: rgba(75, 139, 112, 0.34);
+  background: rgba(75, 139, 112, 0.12);
+}
+
+.insight-session-card__header,
+.insight-session-context__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.insight-session-card__header strong {
+  font-size: 0.96rem;
+}
+
+.insight-session-card__header span,
+.insight-session-context__row span {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.insight-session-card__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.insight-session-card__metrics span {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-text);
+  font-size: 0.8rem;
+}
+
 @keyframes yawn-pulse {
   0% {
     transform: scale(1);
@@ -826,5 +927,12 @@ p {
 
   .inline-form {
     grid-template-columns: 1fr;
+  }
+
+  .insight-session-card__header,
+  .insight-session-context__row,
+  .insight-focus-row__controls {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

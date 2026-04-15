@@ -12,6 +12,16 @@ export function formatShortDate(timestamp: number) {
   }).format(timestamp);
 }
 
+export function formatShortWeekday(timestamp: number) {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+  }).format(timestamp);
+}
+
+export function formatShortDateTime(timestamp: number) {
+  return `${formatShortDate(timestamp)} · ${formatClock(timestamp)}`;
+}
+
 export function formatDurationMinutes(totalMinutes: number) {
   if (totalMinutes < 60) {
     return `${totalMinutes}m`;
@@ -38,4 +48,3 @@ export function buildDateKey(timestamp: number) {
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
-

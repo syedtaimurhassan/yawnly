@@ -9,24 +9,24 @@ import {
 } from "recharts";
 import { ChartCard } from "@/components/charts/ChartCard";
 import { ChartTooltip } from "@/components/charts/ChartTooltip";
+import type { TimeOfDayImpactDatum } from "@/features/analytics/model/analytics.selectors";
 
-interface SleepImpactChartProps {
-  data: Array<{ avgYawnsPerHour: number; label: string; sessionCount: number; sessionsWithYawnsPct: number }>;
+interface TimeOfDayImpactChartProps {
+  data: TimeOfDayImpactDatum[];
 }
 
 const BAR_COLORS = [
-  "var(--color-heat-1)",
-  "var(--color-heat-2)",
-  "var(--color-heat-3)",
-  "var(--color-heat-4)",
-  "var(--color-heat-5)",
+  "var(--color-fatigue-low)",
+  "var(--color-primary)",
+  "var(--color-accent)",
+  "var(--color-fatigue-high)",
 ];
 
-export function SleepImpactChart({ data }: SleepImpactChartProps) {
+export function TimeOfDayImpactChart({ data }: TimeOfDayImpactChartProps) {
   return (
     <ChartCard
-      title="Fatigue and sleep"
-      description="Compare fatigue rate after different sleep quality ratings from the night before."
+      description="Use this to see whether some parts of the day tend to pull fatigue cues forward more than others."
+      title="Fatigue rate by time of day"
     >
       <ResponsiveContainer height={220} width="100%">
         <BarChart data={data}>
@@ -38,7 +38,7 @@ export function SleepImpactChart({ data }: SleepImpactChartProps) {
                 return null;
               }
 
-              const entry = payload[0].payload as SleepImpactChartProps["data"][number];
+              const entry = payload[0].payload as TimeOfDayImpactDatum;
 
               return (
                 <ChartTooltip
@@ -48,19 +48,19 @@ export function SleepImpactChart({ data }: SleepImpactChartProps) {
                     {
                       color: payload[0].color as string,
                       name: "Yawns per hour",
-                      value: `${entry.avgYawnsPerHour}/hr`,
+                      value: `${entry.yawnsPerHour}/hr`,
                     },
                     {
                       color: "rgba(31, 36, 46, 0.15)",
-                      name: "Sessions with yawns",
-                      value: `${entry.sessionsWithYawnsPct}%`,
+                      name: "Sessions",
+                      value: entry.sessionCount,
                     },
                   ]}
                 />
               );
             }}
           />
-          <Bar dataKey="avgYawnsPerHour" radius={[10, 10, 0, 0]}>
+          <Bar dataKey="yawnsPerHour" radius={[10, 10, 0, 0]}>
             {data.map((entry, index) => (
               <Cell fill={BAR_COLORS[index % BAR_COLORS.length]} key={entry.label} />
             ))}
