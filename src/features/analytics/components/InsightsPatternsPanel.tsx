@@ -1,6 +1,8 @@
 import { memo, useMemo } from "react";
+import { FatigueTrendChart } from "@/features/analytics/components/FatigueTrendChart";
 import { SleepImpactChart } from "@/features/analytics/components/SleepImpactChart";
 import { TimeOfDayImpactChart } from "@/features/analytics/components/TimeOfDayImpactChart";
+import { WeekdayHeatmap } from "@/features/analytics/components/WeekdayHeatmap";
 import {
   type SessionInsight,
   selectSleepImpact,
@@ -60,7 +62,12 @@ export const InsightsPatternsPanel = memo(function InsightsPatternsPanel({
         <p>{getPatternsMessage({ sleepImpact, timeOfDayData })}</p>
       </div>
 
+      <FatigueTrendChart insights={insights} />
+
+      <WeekdayHeatmap insights={insights} />
+
       <SleepImpactChart data={sleepImpact} />
+
       <TimeOfDayImpactChart data={timeOfDayData} />
     </>
   );

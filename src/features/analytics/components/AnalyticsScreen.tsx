@@ -15,6 +15,7 @@ import {
   type ComparisonMetric,
   type DateRangeFilter,
   filterSessionInsights,
+  selectTrendStats,
 } from "@/features/analytics/model/analytics.selectors";
 
 type InsightView = "overview" | "patterns" | "session";
@@ -63,6 +64,11 @@ export function AnalyticsScreen({
   const dateFilteredInsights = useMemo(
     () => filterSessionInsights(analytics.sessionInsights, { dateRange }),
     [analytics.sessionInsights, dateRange],
+  );
+
+  const trendStats = useMemo(
+    () => selectTrendStats(analytics.sessionInsights),
+    [analytics.sessionInsights],
   );
 
   useEffect(() => {
@@ -226,6 +232,8 @@ export function AnalyticsScreen({
               onToggleCourseFocus={handleToggleCourseFocus}
               selectedCourseId={selectedCourseId}
               selectedSessionId={selectedSessionId}
+              showTrends={dateRange === "30d"}
+              trendStats={trendStats}
             />
           ) : null}
         </section>

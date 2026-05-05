@@ -967,6 +967,260 @@ p {
   }
 }
 
+/* ---- Scatter chart ---- */
+
+.scatter-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.scatter-legend__badge {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.scatter-legend__badge--low {
+  background: rgba(77, 179, 136, 0.18);
+  color: #2d7a56;
+}
+
+.scatter-legend__badge--high {
+  background: rgba(215, 103, 66, 0.14);
+  color: #a84f2d;
+}
+
+.scatter-legend__track {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #4db388, #d1a347, #d76742);
+}
+
+/* ---- Fatigue trend chart ---- */
+
+.trend-metric-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.trend-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.trend-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.trend-legend__dot {
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+}
+
+.trend-legend__dot--session {
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(75, 139, 112, 0.5) 0 4px,
+    transparent 4px 8px
+  );
+}
+
+.trend-legend__dot--rolling {
+  background: var(--color-primary);
+}
+
+/* ---- Stat tile trend badges ---- */
+
+.stat-tile__value-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stat-tile__context {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+}
+
+.trend-badge {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.trend-badge--good {
+  color: var(--color-primary-strong);
+  background: rgba(75, 139, 112, 0.14);
+}
+
+.trend-badge--bad {
+  color: var(--color-danger);
+  background: rgba(215, 103, 66, 0.1);
+}
+
+.trend-badge--neutral {
+  color: var(--color-muted);
+  background: rgba(115, 123, 140, 0.1);
+}
+
+/* ---- Weekday heatmap ---- */
+
+.heatmap {
+  display: grid;
+  gap: 5px;
+}
+
+.heatmap-header {
+  display: grid;
+  grid-template-columns: 34px repeat(4, 1fr);
+  gap: 4px;
+  padding-bottom: 2px;
+}
+
+.heatmap-header-cell {
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-align: center;
+}
+
+.heatmap-row {
+  display: grid;
+  grid-template-columns: 34px repeat(4, 1fr);
+  gap: 4px;
+}
+
+.heatmap-weekday {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-muted);
+  display: flex;
+  align-items: center;
+}
+
+.heatmap-cell {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  cursor: pointer;
+  border: 0;
+  transition: opacity 140ms ease;
+}
+
+.heatmap-cell:hover {
+  opacity: 0.75;
+}
+
+.heatmap-cell--empty {
+  cursor: default;
+}
+
+.heatmap-cell--empty:hover {
+  opacity: 1;
+}
+
+.heatmap-cell--selected {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.heatmap-cell__value {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(31, 36, 46, 0.6);
+  pointer-events: none;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.heatmap-legend__label {
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.heatmap-legend__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-heat-1),
+    var(--color-heat-2),
+    var(--color-heat-3),
+    var(--color-heat-4),
+    var(--color-heat-5)
+  );
+}
+
+.heatmap-detail {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(235, 231, 224, 0.72);
+  margin-top: 4px;
+}
+
+.heatmap-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.heatmap-detail__metrics {
+  display: flex;
+  gap: 20px;
+}
+
+.heatmap-detail__metric {
+  display: grid;
+  gap: 2px;
+}
+
+.heatmap-detail__metric strong {
+  font-size: 1.15rem;
+  font-family: var(--font-display);
+}
+
+.heatmap-detail__metric span {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+/* ---- Session chart toggle ---- */
+
+.session-chart-toggle {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 @media (max-width: 380px) {
   .task-grid,
   .button-row {

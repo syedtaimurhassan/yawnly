@@ -4,6 +4,8 @@ import {
   type ComparisonMetric,
   type CourseComparisonDatum,
   type SessionInsight,
+  type TrendStats,
+  type TrendValue,
   formatComparisonMetricValue,
   formatYawnCount,
   getComparisonMetricValue,
@@ -35,6 +37,37 @@ interface InsightsSummaryPanelProps {
   onToggleCourseFocus: (courseId: string) => void;
   selectedCourseId: string | null;
   selectedSessionId: string | null;
+  showTrends?: boolean;
+  trendStats?: TrendStats | null;
+}
+
+function TrendBadge({
+  formatter,
+  isPositiveGood,
+  value,
+}: {
+  formatter: (n: number) => string;
+  isPositiveGood: boolean | "neutral";
+  value: TrendValue;
+}) {
+  if (value.delta === null || value.direction === null || value.direction === "flat") {
+    return null;
+  }
+  const arrow = value.direction === "up" ? "↑" : "↓";
+  let variant: "good" | "bad" | "neutral";
+  if (isPositiveGood === "neutral") {
+    variant = "neutral";
+  } else if (isPositiveGood) {
+    variant = value.direction === "up" ? "good" : "bad";
+  } else {
+    variant = value.direction === "up" ? "bad" : "good";
+  }
+  return (
+    <span className={`trend-badge trend-badge--${variant}`}>
+      {arrow}
+      {formatter(Math.abs(value.delta))}
+    </span>
+  );
 }
 
 function sortComparisonData(data: CourseComparisonDatum[], metric: ComparisonMetric) {
@@ -182,6 +215,8 @@ export const InsightsSummaryPanel = memo(function InsightsSummaryPanel({
   onToggleCourseFocus,
   selectedCourseId,
   selectedSessionId,
+  showTrends = false,
+  trendStats = null,
 }: InsightsSummaryPanelProps) {
   const comparisonData = useMemo(
     () => sortComparisonData(selectCourseComparison(insights), comparisonMetric),
@@ -220,18 +255,56 @@ export const InsightsSummaryPanel = memo(function InsightsSummaryPanel({
 
       <div className="stats-grid">
         <div className="stat-tile">
-          <strong>{overview.sessionCount}</strong>
+          <div className="stat-tile__value-row">
+            <strong>{overview.sessionCount}</strong>
+            {showTrends && trendStats && (
+              <TrendBadge
+                formatter={(n) => String(Math.round(n))}
+                isPositiveGood="neutral"
+                value={trendStats.sessionCount}
+              />
+            )}
+          </div>
           <span>Sessions tracked</span>
+          {showTrends && trendStats?.sessionCount.previous !== null && (
+            <span className="stat-tile__context">vs prev 30d</span>
+          )}
         </div>
         <div className="stat-tile">
-          <strong>{overview.sessionsWithYawnsPct}%</strong>
+          <div className="stat-tile__value-row">
+            <strong>{overview.sessionsWithYawnsPct}%</strong>
+            {showTrends && trendStats && (
+              <TrendBadge
+                formatter={(n) => `${Math.round(n)}%`}
+                isPositiveGood={false}
+                value={trendStats.sessionsWithYawnsPct}
+              />
+            )}
+          </div>
           <span>Sessions with yawns</span>
+          {showTrends && trendStats?.sessionsWithYawnsPct.previous !== null && (
+            <span className="stat-tile__context">vs prev 30d</span>
+          )}
         </div>
         <div className="stat-tile">
-          <strong>
-            {overview.avgFirstYawnMinute === null ? "No yawns" : `${Math.round(overview.avgFirstYawnMinute)} min`}
-          </strong>
+          <div className="stat-tile__value-row">
+            <strong>
+              {overview.avgFirstYawnMinute === null
+                ? "No yawns"
+                : `${Math.round(overview.avgFirstYawnMinute)} min`}
+            </strong>
+            {showTrends && trendStats && overview.avgFirstYawnMinute !== null && (
+              <TrendBadge
+                formatter={(n) => `${Math.round(n)}m`}
+                isPositiveGood={true}
+                value={trendStats.avgFirstYawnMinute}
+              />
+            )}
+          </div>
           <span>Typical first yawn</span>
+          {showTrends && trendStats?.avgFirstYawnMinute.previous !== null && (
+            <span className="stat-tile__context">vs prev 30d</span>
+          )}
         </div>
       </div>
 

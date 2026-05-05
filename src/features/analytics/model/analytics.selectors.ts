@@ -16,7 +16,7 @@ const DENSE_WINDOW_MINUTES = 15;
 const CLUSTER_GAP_MINUTES = 10;
 const ONE_DAY_MS = 24 * 60 * 60 * 1_000;
 
-const TIME_OF_DAY_BUCKETS = ["Morning", "Afternoon", "Evening", "Late night"] as const;
+export const TIME_OF_DAY_BUCKETS = ["Morning", "Afternoon", "Evening", "Late night"] as const;
 
 export type DateRangeFilter = "all" | "30d" | "90d";
 export type ComparisonMetric = "sessionsWithYawnsPct" | "avgYawnsPerSession" | "firstYawnMinute";
@@ -459,5 +459,177 @@ export function selectOverviewStats(insights: SessionInsight[]): OverviewStats {
     sessionCount: insights.length,
     sessionsWithYawnsPct:
       insights.length > 0 ? roundValue((sessionsWithYawns / insights.length) * 100, 0) : 0,
+  };
+}
+
+// ---- Per-yawn scatter points for session detail ----
+
+export interface YawnScatterPoint {
+  index: number;
+  minutesIntoSession: number;
+  sleepiness: number;
+  timestamp: number;
+}
+
+export function selectYawnScatterPoints(session: StudySession): YawnScatterPoint[] {
+  return [...session.yawns]
+    .sort((a, b) => a.timestamp - b.timestamp)
+    .map((yawn, index) => ({
+      index,
+      minutesIntoSession: roundValue(Math.max(0, (yawn.timestamp - session.startTime) / 60_000)),
+      sleepiness: yawn.sleepiness,
+      timestamp: yawn.timestamp,
+    }));
+}
+
+// ---- Fatigue trend over sessions ----
+
+export interface FatigueTrendPoint {
+  avgSleepiness: number;
+  dateLabel: string;
+  firstYawnMinute: number | null;
+  rollingAvgSleepiness: number;
+  rollingAvgYawns: number;
+  sessionId: string;
+  timestamp: number;
+  totalYawns: number;
+}
+
+export function selectFatigueTrend(insights: SessionInsight[]): FatigueTrendPoint[] {
+  const sorted = [...insights].sort((a, b) => a.startTime - b.startTime);
+
+  return sorted.map((insight, index) => {
+    const windowStart = Math.max(0, index - 2);
+    const rollingWindow = sorted.slice(windowStart, index + 1);
+    const rollingAvgYawns = roundValue(
+      rollingWindow.reduce((sum, s) => sum + s.totalYawns, 0) / rollingWindow.length,
+    );
+    const rollingAvgSleepiness = roundValue(
+      rollingWindow.reduce((sum, s) => sum + s.avgSleepiness, 0) / rollingWindow.length,
+    );
+
+    return {
+      avgSleepiness: roundValue(insight.avgSleepiness),
+      dateLabel: insight.dateLabel,
+      firstYawnMinute: insight.firstYawnMinute,
+      rollingAvgSleepiness,
+      rollingAvgYawns,
+      sessionId: insight.id,
+      timestamp: insight.startTime,
+      totalYawns: insight.totalYawns,
+    };
+  });
+}
+
+// ---- Weekday × time-of-day heatmap ----
+
+function generateWeekdayOrder(): string[] {
+  // 2024-01-01 is a Monday — generate locale-correct short weekday names
+  const monday = new Date(2024, 0, 1).getTime();
+  return Array.from({ length: 7 }, (_, i) =>
+    new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(
+      monday + i * 24 * 60 * 60 * 1000,
+    ),
+  );
+}
+
+export const WEEKDAY_ORDER = generateWeekdayOrder();
+
+export interface HeatmapCell {
+  avgYawns: number | null;
+  sessionCount: number;
+  sessionsWithYawnsPct: number;
+  timeOfDay: TimeOfDayBucket;
+  weekday: string;
+}
+
+export function selectWeekdayHeatmap(insights: SessionInsight[]): HeatmapCell[][] {
+  const aggregates = new Map<
+    string,
+    { sessionsWithYawns: number; sessionCount: number; totalYawns: number }
+  >();
+
+  for (const insight of insights) {
+    const key = `${insight.weekdayLabel}|${insight.timeOfDayBucket}`;
+    const current = aggregates.get(key) ?? {
+      sessionsWithYawns: 0,
+      sessionCount: 0,
+      totalYawns: 0,
+    };
+    current.sessionCount += 1;
+    current.totalYawns += insight.totalYawns;
+    if (insight.hasAnyYawn) current.sessionsWithYawns += 1;
+    aggregates.set(key, current);
+  }
+
+  return WEEKDAY_ORDER.map((weekday) =>
+    TIME_OF_DAY_BUCKETS.map((timeOfDay) => {
+      const key = `${weekday}|${timeOfDay}`;
+      const data = aggregates.get(key);
+
+      if (!data || data.sessionCount === 0) {
+        return { avgYawns: null, sessionCount: 0, sessionsWithYawnsPct: 0, timeOfDay, weekday };
+      }
+
+      return {
+        avgYawns: roundValue(data.totalYawns / data.sessionCount),
+        sessionCount: data.sessionCount,
+        sessionsWithYawnsPct: roundValue(
+          (data.sessionsWithYawns / data.sessionCount) * 100,
+          0,
+        ),
+        timeOfDay,
+        weekday,
+      };
+    }),
+  );
+}
+
+// ---- 30-day vs previous 30-day trend comparison ----
+
+export interface TrendValue {
+  current: number | null;
+  delta: number | null;
+  direction: "down" | "flat" | "up" | null;
+  previous: number | null;
+}
+
+export interface TrendStats {
+  avgFirstYawnMinute: TrendValue;
+  sessionCount: TrendValue;
+  sessionsWithYawnsPct: TrendValue;
+}
+
+export function selectTrendStats(allInsights: SessionInsight[], now = Date.now()): TrendStats {
+  const thirtyDays = 30 * ONE_DAY_MS;
+  const currentWindow = allInsights.filter((i) => i.startTime >= now - thirtyDays);
+  const previousWindow = allInsights.filter(
+    (i) => i.startTime >= now - 2 * thirtyDays && i.startTime < now - thirtyDays,
+  );
+
+  const current = selectOverviewStats(currentWindow);
+  const previous = selectOverviewStats(previousWindow);
+
+  function makeTrendValue(
+    curr: number | null,
+    prev: number | null,
+    flatThreshold: number,
+  ): TrendValue {
+    if (curr === null || previousWindow.length === 0 || prev === null) {
+      return { current: curr, delta: null, direction: null, previous: null };
+    }
+    const delta = roundValue(curr - prev);
+    const direction = Math.abs(delta) < flatThreshold ? "flat" : delta > 0 ? "up" : "down";
+    return { current: curr, delta, direction, previous: prev };
+  }
+
+  return {
+    avgFirstYawnMinute: makeTrendValue(current.avgFirstYawnMinute, previous.avgFirstYawnMinute, 2),
+    sessionCount: makeTrendValue(current.sessionCount, previous.sessionCount, 1),
+    sessionsWithYawnsPct: makeTrendValue(
+      current.sessionsWithYawnsPct,
+      previous.sessionsWithYawnsPct,
+      5,
+    ),
   };
 }

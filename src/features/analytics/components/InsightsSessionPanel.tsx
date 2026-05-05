@@ -1,8 +1,10 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { TimelineChart } from "@/features/analytics/components/TimelineChart";
+import { YawnScatterChart } from "@/features/analytics/components/YawnScatterChart";
 import {
   type SessionInsight,
   selectTimelineBuckets,
+  selectYawnScatterPoints,
 } from "@/features/analytics/model/analytics.selectors";
 import { formatDurationMinutes } from "@/lib/dates";
 
@@ -10,6 +12,8 @@ interface InsightsSessionPanelProps {
   insights: SessionInsight[];
   selectedSessionId: string | null;
 }
+
+type ChartMode = "scatter" | "timeline";
 
 function getSessionMessage(selectedInsight: SessionInsight | null) {
   if (!selectedInsight) {
@@ -35,10 +39,18 @@ export const InsightsSessionPanel = memo(function InsightsSessionPanel({
   insights,
   selectedSessionId,
 }: InsightsSessionPanelProps) {
+  const [chartMode, setChartMode] = useState<ChartMode>("scatter");
+
   const selectedInsight =
     insights.find((insight) => insight.id === selectedSessionId) ?? insights[0] ?? null;
+
   const timelineData = useMemo(
     () => (selectedInsight ? selectTimelineBuckets(selectedInsight.session) : []),
+    [selectedInsight],
+  );
+
+  const scatterPoints = useMemo(
+    () => (selectedInsight ? selectYawnScatterPoints(selectedInsight.session) : []),
     [selectedInsight],
   );
 
@@ -57,7 +69,11 @@ export const InsightsSessionPanel = memo(function InsightsSessionPanel({
               <span>Duration</span>
             </div>
             <div className="stat-tile">
-              <strong>{selectedInsight.totalYawns === 1 ? "1 yawn" : `${selectedInsight.totalYawns} yawns`}</strong>
+              <strong>
+                {selectedInsight.totalYawns === 1
+                  ? "1 yawn"
+                  : `${selectedInsight.totalYawns} yawns`}
+              </strong>
               <span>Total yawns</span>
             </div>
             <div className="stat-tile">
@@ -99,11 +115,44 @@ export const InsightsSessionPanel = memo(function InsightsSessionPanel({
             </div>
           </div>
 
-          <TimelineChart
-            data={timelineData}
-            description="This timeline shows where yawns stayed isolated and where they started to cluster together."
-            title="Selected session timeline"
-          />
+          <div className="session-chart-toggle segmented-control">
+            <button
+              className={
+                chartMode === "scatter"
+                  ? "segmented-control__item segmented-control__item--active"
+                  : "segmented-control__item"
+              }
+              onClick={() => setChartMode("scatter")}
+              type="button"
+            >
+              Individual yawns
+            </button>
+            <button
+              className={
+                chartMode === "timeline"
+                  ? "segmented-control__item segmented-control__item--active"
+                  : "segmented-control__item"
+              }
+              onClick={() => setChartMode("timeline")}
+              type="button"
+            >
+              5-min buckets
+            </button>
+          </div>
+
+          {chartMode === "scatter" ? (
+            <YawnScatterChart
+              durationMinutes={selectedInsight.durationMinutes}
+              firstYawnMinute={selectedInsight.firstYawnMinute}
+              points={scatterPoints}
+            />
+          ) : (
+            <TimelineChart
+              data={timelineData}
+              description="Where yawns stayed isolated and where they started to cluster."
+              title="Session timeline"
+            />
+          )}
         </>
       ) : (
         <div className="card">
